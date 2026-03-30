@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 type MenuItem = {
@@ -66,19 +65,12 @@ export default function MenuPage() {
               Team Matcha
             </p>
             <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-              Menu
+              Customer View
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-[#6f5848] sm:text-base">
               Fresh drinks and cafe favorites, served in a simple menu view.
             </p>
           </div>
-
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center rounded-full border border-[#cbb8a3] px-5 py-2.5 text-sm font-semibold text-[#5f4635] transition hover:border-[#8a6240] hover:text-[#2f241d]"
-          >
-            Back Home
-          </Link>
         </div>
 
         <div className="mt-8">

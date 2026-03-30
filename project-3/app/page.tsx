@@ -1,23 +1,43 @@
 import Link from "next/link";
 
 export default function Home() {
+  const portalLinks = [
+    {
+      href: "/menu",
+      label: "Customer",
+    },
+    {
+      href: "#employee",
+      label: "Employee",
+    },
+    {
+      href: "#manager",
+      label: "Manager",
+    },
+  ];
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(135deg,#fff8ef_0%,#f8efe3_45%,#e9f5ef_100%)] px-6 py-16 text-[#2f241d]">
-      <section className="w-full max-w-2xl rounded-[32px] border border-[#cbb8a3] bg-white/85 p-10 shadow-[0_24px_80px_rgba(79,55,33,0.16)] backdrop-blur">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-[#8a6240]">
-          Team Matcha Portal
+    <main className="min-h-screen bg-[#eef1ec] px-6 py-10 text-[#1f2520]">
+      <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-4xl flex-col justify-center rounded-[28px] border border-[#c8d1c4] bg-[#f8faf7] p-8 shadow-[0_18px_48px_rgba(31,37,32,0.08)] sm:p-12">
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5d6b5e]">
+          Team Matcha POS
         </p>
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Portal Page
+        <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
+          Portal
         </h1>
 
-        <div className="mt-8">
-          <Link
-            href="/menu"
-            className="inline-flex items-center justify-center rounded-full bg-[#2f7a5f] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#245f4a]"
-          >
-            Open Menu
-          </Link>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {portalLinks.map((portalLink) => (
+            <Link
+              key={portalLink.href}
+              href={portalLink.href}
+              className="flex min-h-40 items-center justify-center rounded-[24px] border border-[#b9c5b6] bg-white px-6 py-6 text-center shadow-[0_8px_24px_rgba(31,37,32,0.06)] transition hover:border-[#829080] hover:bg-[#f4f7f3] focus:outline-none focus:ring-4 focus:ring-[#d7e2d4]"
+            >
+              <h2 className="text-3xl font-bold text-[#1f2520]">
+                {portalLink.label}
+              </h2>
+            </Link>
+          ))}
         </div>
       </section>
     </main>
