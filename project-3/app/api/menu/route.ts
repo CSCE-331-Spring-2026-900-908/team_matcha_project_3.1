@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db'; 
+import pool from '@/lib/db';
 
 export async function GET() {
   try {
     const client = await pool.connect();
-    // Querying your Project 2 menu table
-    const result = await client.query('SELECT * FROM menu LIMIT 10;'); 
+
+    const result = await client.query(
+      'SELECT menuid, name, cost FROM menu ORDER BY name ASC;'
+    );
+
     client.release();
-    
-    return NextResponse.json(result.rows);
+
+    const menuItems = result.rows.map((row) => ({
+      menuid: row.menuid,
+      name: row.name,
+      cost: Number(row.cost),
+    }));
+
+    return NextResponse.json(menuItems);
   } catch (error) {
     console.error("Database connection error:", error);
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
