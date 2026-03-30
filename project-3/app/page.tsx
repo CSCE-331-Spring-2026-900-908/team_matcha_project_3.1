@@ -3,15 +3,15 @@ import Link from "next/link";
 export default function Home() {
   const portalLinks = [
     {
-      href: "/menu",
+      href: "/customer",
       label: "Customer",
     },
     {
-      href: "#employee",
+      href: "/employee",
       label: "Employee",
     },
     {
-      href: "#manager",
+      href: "/manager",
       label: "Manager",
     },
   ];
