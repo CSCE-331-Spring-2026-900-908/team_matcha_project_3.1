@@ -8,7 +8,7 @@ export default function Home() {
     },
     {
       href: "/employee",
-      label: "Menu",
+      label: "Employee",
     },
     {
       href: "/manager",
