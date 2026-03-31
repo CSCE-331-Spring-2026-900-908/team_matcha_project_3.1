@@ -3,17 +3,21 @@ import Link from "next/link";
 export default function Home() {
   const portalLinks = [
     {
-      href: "/customer",
-      label: "Customer",
+      href: "/menu",
+      label: "Menu",
     },
     {
       href: "/employee",
-      label: "Employee",
+      label: "Menu",
     },
     {
       href: "/manager",
       label: "Manager",
     },
+    {
+      href: "/Kiosk",
+      label: "Kiosk",
+    }
   ];
 
   return (
@@ -31,7 +35,9 @@ export default function Home() {
             <Link
               key={portalLink.href}
               href={portalLink.href}
-              className="flex min-h-40 items-center justify-center rounded-[24px] border border-[#b9c5b6] bg-white px-6 py-6 text-center shadow-[0_8px_24px_rgba(31,37,32,0.06)] transition hover:border-[#829080] hover:bg-[#f4f7f3] focus:outline-none focus:ring-4 focus:ring-[#d7e2d4]"
+              className={`flex min-h-40 items-center justify-center rounded-[24px] border border-[#b9c5b6] bg-white px-6 py-6 text-center shadow-[0_8px_24px_rgba(31,37,32,0.06)] transition hover:border-[#829080] hover:bg-[#f4f7f3] focus:outline-none focus:ring-4 focus:ring-[#d7e2d4] ${
+                portalLink.label === "Kiosk" ? "md:col-start-2" : ""
+              }`}
             >
               <h2 className="text-3xl font-bold text-[#1f2520]">
                 {portalLink.label}
