@@ -1,21 +1,9 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import { getMenuItems } from '@/lib/menu';
 
 export async function GET() {
   try {
-    const client = await pool.connect();
-
-    const result = await client.query(
-      'SELECT menuid, name, cost FROM menu ORDER BY name ASC;'
-    );
-
-    client.release();
-
-    const menuItems = result.rows.map((row) => ({
-      menuid: row.menuid,
-      name: row.name,
-      cost: Number(row.cost),
-    }));
+    const menuItems = await getMenuItems();
 
     return NextResponse.json(menuItems);
   } catch (error) {
