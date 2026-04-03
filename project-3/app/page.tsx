@@ -15,7 +15,7 @@ export default function Home() {
       label: "Manager",
     },
     {
-      href: "/Kiosk",
+      href: "/kiosk",
       label: "Kiosk",
     }
   ];
