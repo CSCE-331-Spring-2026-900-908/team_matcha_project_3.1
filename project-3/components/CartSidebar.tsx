@@ -42,14 +42,19 @@ export default function CartSidebar({
           </div>
         ) : (
           <div className="space-y-4">
-            {cart.map(item => (
+            {cart.map((item, index) => (
               <div
-                key={item.menuid}
+                key={`${item.menuid}-${index}`}
                 className="flex items-center gap-4 rounded-xl border border-[#f0e6d8] bg-[#fdfaf6] p-3"
               >
                 <div className="flex-1">
                   <h4 className="font-bold text-sm leading-tight">{item.name}</h4>
-                  <p className="text-[#2f7a5f] text-sm font-semibold">
+                  <p className="text-xs text-[#8a6240] mt-0.5">
+                    {[item.iceLevel, item.sugarLevel, item.topping !== 'None' ? item.topping : null]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </p>
+                  <p className="text-[#2f7a5f] text-sm font-semibold mt-1">
                     {currencyFormatter.format(item.cost)}
                   </p>
                 </div>

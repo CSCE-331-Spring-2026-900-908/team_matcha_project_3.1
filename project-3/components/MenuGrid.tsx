@@ -4,10 +4,10 @@ import { categorizeItem, currencyFormatter, type MenuItem } from './pos-types';
 type Props = {
   items: MenuItem[];
   error: string | null;
-  onAddToCart: (item: MenuItem) => void;
+  onSelectItem: (item: MenuItem) => void;
 };
 
-export default function MenuGrid({ items, error, onAddToCart }: Props) {
+export default function MenuGrid({ items, error, onSelectItem }: Props) {
   return (
     <>
       {error ? (
@@ -19,11 +19,21 @@ export default function MenuGrid({ items, error, onAddToCart }: Props) {
           {items.map(item => (
             <button
               key={item.menuid}
-              onClick={() => onAddToCart(item)}
+              onClick={() => onSelectItem(item)}
               className="group flex flex-col overflow-hidden rounded-2xl border border-[#eadfce] bg-white transition-all hover:border-[#2f7a5f] hover:shadow-lg active:scale-95"
             >
-              <div className="h-32 w-full bg-[#f8f1e7] group-hover:bg-[#ecf4f0] transition-colors flex items-center justify-center text-4xl opacity-40">
-                🍵
+              <div className="h-48 w-full overflow-hidden bg-[#f8f1e7]">
+                {item.image_url ? (
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-4xl opacity-40 group-hover:bg-[#ecf4f0] transition-colors">
+                    🍵
+                  </div>
+                )}
               </div>
               <div className="flex flex-1 flex-col p-4 text-left">
                 <span className="text-xs font-bold uppercase text-[#8a6240] opacity-70">
