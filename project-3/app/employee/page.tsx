@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import MenuGrid from '@/components/MenuGrid';
 import CartSidebar from '@/components/CartSidebar';
-import { categorizeItem, type MenuItem, type CartItem } from '@/components/pos-types';
+import {
+  categorizeItem,
+  type MenuItem,
+  type CartItem,
+} from '@/components/pos-types';
 
 type Employee = {
   employeeid: number;
@@ -19,7 +22,9 @@ export default function EmployeePOSPage() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
+    null
+  );
   const [customerName, setCustomerName] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
@@ -32,7 +37,9 @@ export default function EmployeePOSPage() {
         const data: MenuItem[] = await response.json();
         setItems(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load menu items.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load menu items.'
+        );
       } finally {
         setIsLoading(false);
       }
@@ -55,32 +62,36 @@ export default function EmployeePOSPage() {
   }, []);
 
   const categories = useMemo(() => {
-    const cats = new Set(items.map(item => categorizeItem(item.name)));
+    const cats = new Set(items.map((item) => categorizeItem(item.name)));
     return ['All', ...Array.from(cats)];
   }, [items]);
 
   const filteredItems = useMemo(() => {
     if (activeCategory === 'All') return items;
-    return items.filter(item => categorizeItem(item.name) === activeCategory);
+    return items.filter((item) => categorizeItem(item.name) === activeCategory);
   }, [items, activeCategory]);
 
   const addToCart = (item: MenuItem) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.menuid === item.menuid);
+    setCart((prev) => {
+      const existing = prev.find((i) => i.menuid === item.menuid);
       if (existing) {
-        return prev.map(i => i.menuid === item.menuid ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map((i) =>
+          i.menuid === item.menuid ? { ...i, quantity: i.quantity + 1 } : i
+        );
       }
       return [...prev, { ...item, quantity: 1 }];
     });
   };
 
   const removeFromCart = (menuid: number) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.menuid === menuid);
+    setCart((prev) => {
+      const existing = prev.find((i) => i.menuid === menuid);
       if (existing && existing.quantity > 1) {
-        return prev.map(i => i.menuid === menuid ? { ...i, quantity: i.quantity - 1 } : i);
+        return prev.map((i) =>
+          i.menuid === menuid ? { ...i, quantity: i.quantity - 1 } : i
+        );
       }
-      return prev.filter(i => i.menuid !== menuid);
+      return prev.filter((i) => i.menuid !== menuid);
     });
   };
 
@@ -101,7 +112,7 @@ export default function EmployeePOSPage() {
           employeeID: selectedEmployeeId,
           customerName: customerName.trim() || null,
           costTotal: Math.round(costTotal * 100) / 100,
-          items: cart.map(item => ({
+          items: cart.map((item) => ({
             menuid: item.menuid,
             quantity: item.quantity,
             cost: item.cost,
@@ -120,11 +131,12 @@ export default function EmployeePOSPage() {
     }
   };
 
-  if (isLoading) return (
-    <div className="flex min-h-screen items-center justify-center bg-[#fdfaf6] text-[#6f5848]">
-      Preparing Menu...
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fdfaf6] text-[#6f5848]">
+        Preparing Menu...
+      </div>
+    );
 
   return (
     <main className="flex h-screen flex-col bg-[#fdfaf6] text-[#2f241d] lg:flex-row">
@@ -132,19 +144,20 @@ export default function EmployeePOSPage() {
         <header className="border-b border-[#eadfce] bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <Link href="/" className="text-xs font-bold uppercase tracking-widest text-[#8a6240] hover:underline">
-                ← Portal
-              </Link>
-              <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Cashier POS</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                Cashier POS
+              </h1>
             </div>
             <div className="flex items-center gap-3">
               <select
                 value={selectedEmployeeId ?? ''}
-                onChange={e => setSelectedEmployeeId(Number(e.target.value) || null)}
+                onChange={(e) =>
+                  setSelectedEmployeeId(Number(e.target.value) || null)
+                }
                 className="rounded-xl border border-[#eadfce] bg-[#f8f1e7] px-4 py-2 text-sm font-semibold text-[#2f241d] focus:outline-none focus:ring-2 focus:ring-[#2f7a5f]"
               >
                 <option value="">Select Employee</option>
-                {employees.map(emp => (
+                {employees.map((emp) => (
                   <option key={emp.employeeid} value={emp.employeeid}>
                     {emp.name}
                   </option>
@@ -154,7 +167,7 @@ export default function EmployeePOSPage() {
           </div>
 
           <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -189,7 +202,7 @@ export default function EmployeePOSPage() {
           <div className="space-y-3 pb-2">
             {orderSuccess && (
               <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
-                ✓ Order #{orderSuccess} placed successfully!
+                Order #{orderSuccess} placed successfully!
               </div>
             )}
             <div>
@@ -199,7 +212,7 @@ export default function EmployeePOSPage() {
               <input
                 type="text"
                 value={customerName}
-                onChange={e => setCustomerName(e.target.value)}
+                onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Optional"
                 className="mt-1 w-full rounded-xl border border-[#eadfce] bg-white px-4 py-2 text-sm text-[#2f241d] placeholder-[#b8a898] focus:outline-none focus:ring-2 focus:ring-[#2f7a5f]"
               />

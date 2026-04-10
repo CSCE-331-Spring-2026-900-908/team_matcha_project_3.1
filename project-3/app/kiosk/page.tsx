@@ -1,9 +1,13 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
-import Link from 'next/link';
+
+import { useEffect, useMemo, useState } from 'react';
 import MenuGrid from '@/components/MenuGrid';
 import CartSidebar from '@/components/CartSidebar';
-import { categorizeItem, type MenuItem, type CartItem } from '@/components/pos-types';
+import {
+  categorizeItem,
+  type MenuItem,
+  type CartItem,
+} from '@/components/pos-types';
 
 export default function KioskPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -20,7 +24,9 @@ export default function KioskPage() {
         const data: MenuItem[] = await response.json();
         setItems(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load menu items.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load menu items.'
+        );
       } finally {
         setIsLoading(false);
       }
@@ -29,40 +35,45 @@ export default function KioskPage() {
   }, []);
 
   const categories = useMemo(() => {
-    const cats = new Set(items.map(item => categorizeItem(item.name)));
+    const cats = new Set(items.map((item) => categorizeItem(item.name)));
     return ['All', ...Array.from(cats)];
   }, [items]);
 
   const filteredItems = useMemo(() => {
     if (activeCategory === 'All') return items;
-    return items.filter(item => categorizeItem(item.name) === activeCategory);
+    return items.filter((item) => categorizeItem(item.name) === activeCategory);
   }, [items, activeCategory]);
 
   const addToCart = (item: MenuItem) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.menuid === item.menuid);
+    setCart((prev) => {
+      const existing = prev.find((i) => i.menuid === item.menuid);
       if (existing) {
-        return prev.map(i => i.menuid === item.menuid ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map((i) =>
+          i.menuid === item.menuid ? { ...i, quantity: i.quantity + 1 } : i
+        );
       }
       return [...prev, { ...item, quantity: 1 }];
     });
   };
 
   const removeFromCart = (menuid: number) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.menuid === menuid);
+    setCart((prev) => {
+      const existing = prev.find((i) => i.menuid === menuid);
       if (existing && existing.quantity > 1) {
-        return prev.map(i => i.menuid === menuid ? { ...i, quantity: i.quantity - 1 } : i);
+        return prev.map((i) =>
+          i.menuid === menuid ? { ...i, quantity: i.quantity - 1 } : i
+        );
       }
-      return prev.filter(i => i.menuid !== menuid);
+      return prev.filter((i) => i.menuid !== menuid);
     });
   };
 
-  if (isLoading) return (
-    <div className="flex min-h-screen items-center justify-center bg-[#fdfaf6] text-[#6f5848]">
-      Preparing Menu...
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fdfaf6] text-[#6f5848]">
+        Preparing Menu...
+      </div>
+    );
 
   return (
     <main className="flex h-screen flex-col bg-[#fdfaf6] text-[#2f241d] lg:flex-row">
@@ -70,10 +81,9 @@ export default function KioskPage() {
         <header className="border-b border-[#eadfce] bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <Link href="/" className="text-xs font-bold uppercase tracking-widest text-[#8a6240] hover:underline">
-                ← Portal
-              </Link>
-              <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Kiosk Ordering</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                Kiosk Ordering
+              </h1>
             </div>
             <div className="hidden sm:block">
               <span className="rounded-full bg-[#f8f1e7] px-4 py-2 text-sm font-medium text-[#8a6240]">
@@ -83,14 +93,14 @@ export default function KioskPage() {
           </div>
 
           <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all ${
                   activeCategory === cat
-                    ? "bg-[#2f7a5f] text-white shadow-md"
-                    : "bg-[#f0e6d8] text-[#6f5848] hover:bg-[#e6d8c4]"
+                    ? 'bg-[#2f7a5f] text-white shadow-md'
+                    : 'bg-[#f0e6d8] text-[#6f5848] hover:bg-[#e6d8c4]'
                 }`}
               >
                 {cat}
