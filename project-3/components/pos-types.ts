@@ -4,10 +4,14 @@ export type MenuItem = {
   menuid: number;
   name: string;
   cost: number;
+  image_url?: string;
 };
 
 export type CartItem = MenuItem & {
   quantity: number;
+  iceLevel?: string;
+  sugarLevel?: string;
+  topping?: string;
 };
 
 export const currencyFormatter = new Intl.NumberFormat('en-US', {
