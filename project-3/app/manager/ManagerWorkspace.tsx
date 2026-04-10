@@ -1,9 +1,15 @@
 'use client';
 
+import { useState } from 'react';
+import EmployeesPage from '@/app/manager/EmployeesPage';
 import InventoryPage from '@/app/manager/InventoryPage';
 import ManagerSidebar from '@/app/manager/ManagerSidebar';
 
+export type ManagerTool = 'inventory' | 'employees';
+
 export default function ManagerWorkspace() {
+  const [selectedTool, setSelectedTool] = useState<ManagerTool>('inventory');
+
   return (
     <main className="min-h-screen bg-[linear-gradient(160deg,#edf2ea_0%,#f8fbf7_45%,#e0ebdc_100%)] px-6 py-10 text-[#1f2520]">
       <section className="mx-auto w-full max-w-7xl">
@@ -18,8 +24,12 @@ export default function ManagerWorkspace() {
           </div>
 
           <div className="mt-10 grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-            <ManagerSidebar onSelect={() => undefined} />
-            <InventoryPage />
+            <ManagerSidebar
+              selectedTool={selectedTool}
+              onSelect={setSelectedTool}
+            />
+            {selectedTool === 'inventory' ? <InventoryPage /> : null}
+            {selectedTool === 'employees' ? <EmployeesPage /> : null}
           </div>
         </div>
       </section>
