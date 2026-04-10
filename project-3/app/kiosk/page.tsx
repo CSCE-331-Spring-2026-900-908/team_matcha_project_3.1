@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import MenuGrid from '@/components/MenuGrid';
@@ -83,15 +82,30 @@ export default function KioskPage() {
             </div>
           </div>
 
+          <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                  activeCategory === cat
+                    ? "bg-[#2f7a5f] text-white shadow-md"
+                    : "bg-[#f0e6d8] text-[#6f5848] hover:bg-[#e6d8c4]"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-6">
           <MenuGrid
             items={filteredItems}
             error={error}
-            activeCategory={activeCategory}
-            categories={categories}
-            onCategoryChange={setActiveCategory}
             onAddToCart={addToCart}
           />
-        </header>
+        </div>
       </section>
 
       <CartSidebar

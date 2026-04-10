@@ -18,14 +18,12 @@ export default function EmployeePOSPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  // Employee-specific state
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState<number | null>(null); // stores the orderid on success
+  const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
 
-  // Load menu
   useEffect(() => {
     async function loadMenu() {
       try {
@@ -42,7 +40,6 @@ export default function EmployeePOSPage() {
     loadMenu();
   }, []);
 
-  // Load employees for the dropdown
   useEffect(() => {
     async function loadEmployees() {
       try {
@@ -51,7 +48,6 @@ export default function EmployeePOSPage() {
         const data: Employee[] = await response.json();
         setEmployees(data);
       } catch {
-        // Non-fatal — employee list just won't populate
         console.error('Failed to load employees');
       }
     }
@@ -96,7 +92,6 @@ export default function EmployeePOSPage() {
       alert('Please select an employee before placing an order.');
       return;
     }
-
     setIsPlacingOrder(true);
     try {
       const response = await fetch('/api/orders', {
@@ -113,11 +108,8 @@ export default function EmployeePOSPage() {
           })),
         }),
       });
-
       if (!response.ok) throw new Error('Failed to place order.');
       const order = await response.json();
-
-      // Success — store order id, clear cart
       setOrderSuccess(order.orderid);
       setCart([]);
       setCustomerName('');
@@ -145,8 +137,6 @@ export default function EmployeePOSPage() {
               </Link>
               <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Cashier POS</h1>
             </div>
-
-            {/* Employee selector */}
             <div className="flex items-center gap-3">
               <select
                 value={selectedEmployeeId ?? ''}
@@ -163,15 +153,30 @@ export default function EmployeePOSPage() {
             </div>
           </div>
 
+          <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                  activeCategory === cat
+                    ? 'bg-[#2f7a5f] text-white shadow-md'
+                    : 'bg-[#f0e6d8] text-[#6f5848] hover:bg-[#e6d8c4]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto p-6">
           <MenuGrid
             items={filteredItems}
             error={error}
-            activeCategory={activeCategory}
-            categories={categories}
-            onCategoryChange={setActiveCategory}
             onAddToCart={addToCart}
           />
-        </header>
+        </div>
       </section>
 
       <CartSidebar
@@ -182,13 +187,11 @@ export default function EmployeePOSPage() {
         isPlacingOrder={isPlacingOrder}
         extraFields={
           <div className="space-y-3 pb-2">
-            {/* Success banner */}
             {orderSuccess && (
               <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
                 ✓ Order #{orderSuccess} placed successfully!
               </div>
             )}
-            {/* Customer name input */}
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-[#8a6240]">
                 Customer Name
