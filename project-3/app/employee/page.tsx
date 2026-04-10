@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import MenuGrid from '@/components/MenuGrid';
 import CartSidebar from '@/components/CartSidebar';
+import CustomizationModal from '@/components/CustomizationModal';
 import {
   categorizeItem,
   type MenuItem,
@@ -20,6 +21,7 @@ export default function EmployeePOSPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
@@ -71,27 +73,37 @@ export default function EmployeePOSPage() {
     return items.filter((item) => categorizeItem(item.name) === activeCategory);
   }, [items, activeCategory]);
 
-  const addToCart = (item: MenuItem) => {
+  const addToCart = (customizedItem: CartItem) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.menuid === item.menuid);
+      const existing = prev.find(
+        (i) =>
+          i.menuid === customizedItem.menuid &&
+          i.iceLevel === customizedItem.iceLevel &&
+          i.sugarLevel === customizedItem.sugarLevel &&
+          i.topping === customizedItem.topping
+      );
       if (existing) {
         return prev.map((i) =>
-          i.menuid === item.menuid ? { ...i, quantity: i.quantity + 1 } : i
+          i === existing ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      return [...prev, { ...item, quantity: 1 }];
+      return [...prev, { ...customizedItem, quantity: 1 }];
     });
+    setSelectedItem(null);
   };
 
   const removeFromCart = (menuid: number) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.menuid === menuid);
-      if (existing && existing.quantity > 1) {
-        return prev.map((i) =>
-          i.menuid === menuid ? { ...i, quantity: i.quantity - 1 } : i
+      const index = prev.findLastIndex((i) => i.menuid === menuid);
+      if (index === -1) return prev;
+      
+      const item = prev[index];
+      if (item.quantity > 1) {
+        return prev.map((i, idx) =>
+          idx === index ? { ...i, quantity: i.quantity - 1 } : i
         );
       }
-      return prev.filter((i) => i.menuid !== menuid);
+      return prev.filter((_, idx) => idx !== index);
     });
   };
 
@@ -116,6 +128,9 @@ export default function EmployeePOSPage() {
             menuid: item.menuid,
             quantity: item.quantity,
             cost: item.cost,
+            iceLevel: item.iceLevel,
+            sugarLevel: item.sugarLevel,
+            topping: item.topping,
           })),
         }),
       });
@@ -187,14 +202,14 @@ export default function EmployeePOSPage() {
           <MenuGrid
             items={filteredItems}
             error={error}
-            onAddToCart={addToCart}
+            onSelectItem={setSelectedItem}
           />
         </div>
       </section>
 
       <CartSidebar
         cart={cart}
-        onAdd={addToCart}
+        onAdd={(item) => addToCart(item as CartItem)}
         onRemove={removeFromCart}
         onPlaceOrder={handlePlaceOrder}
         isPlacingOrder={isPlacingOrder}
@@ -220,6 +235,14 @@ export default function EmployeePOSPage() {
           </div>
         }
       />
+
+      {selectedItem && (
+        <CustomizationModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onConfirm={addToCart}
+        />
+      )}
     </main>
   );
 }
