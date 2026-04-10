@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import MenuGrid from '@/components/MenuGrid';
 import CartSidebar from '@/components/CartSidebar';
+import CustomizationModal from '@/components/CustomizationModal';
 import {
   categorizeItem,
   type MenuItem,
@@ -15,6 +16,8 @@ export default function KioskPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   useEffect(() => {
     async function loadMenu() {
@@ -44,28 +47,74 @@ export default function KioskPage() {
     return items.filter((item) => categorizeItem(item.name) === activeCategory);
   }, [items, activeCategory]);
 
-  const addToCart = (item: MenuItem) => {
+  const addToCart = (customizedItem: CartItem) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.menuid === item.menuid);
+      const existing = prev.find(
+        (i) =>
+          i.menuid === customizedItem.menuid &&
+          i.iceLevel === customizedItem.iceLevel &&
+          i.sugarLevel === customizedItem.sugarLevel &&
+          i.topping === customizedItem.topping
+      );
       if (existing) {
         return prev.map((i) =>
-          i.menuid === item.menuid ? { ...i, quantity: i.quantity + 1 } : i
+          i === existing ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      return [...prev, { ...item, quantity: 1 }];
+      return [...prev, { ...customizedItem, quantity: 1 }];
     });
+    setSelectedItem(null);
   };
 
   const removeFromCart = (menuid: number) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.menuid === menuid);
-      if (existing && existing.quantity > 1) {
-        return prev.map((i) =>
-          i.menuid === menuid ? { ...i, quantity: i.quantity - 1 } : i
+      const index = prev.findLastIndex((i) => i.menuid === menuid);
+      if (index === -1) return prev;
+      
+      const item = prev[index];
+      if (item.quantity > 1) {
+        return prev.map((i, idx) =>
+          idx === index ? { ...i, quantity: i.quantity - 1 } : i
         );
       }
-      return prev.filter((i) => i.menuid !== menuid);
+      return prev.filter((_, idx) => idx !== index);
     });
+  };
+
+  const placeOrder = async () => {
+    if (cart.length === 0) return;
+    setIsPlacingOrder(true);
+    try {
+      const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
+      const costTotal = subtotal * 1.0825;
+
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: 'Kiosk Customer',
+          costTotal: costTotal,
+          employeeID: 1, // Default kiosk employee
+          items: cart.map((item) => ({
+            menuid: item.menuid,
+            quantity: item.quantity,
+            cost: item.cost,
+            iceLevel: item.iceLevel,
+            sugarLevel: item.sugarLevel,
+            topping: item.topping,
+          })),
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to place order.');
+      
+      alert('Order Placed Successfully!');
+      setCart([]);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to place order.');
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   if (isLoading)
@@ -113,17 +162,26 @@ export default function KioskPage() {
           <MenuGrid
             items={filteredItems}
             error={error}
-            onAddToCart={addToCart}
+            onSelectItem={setSelectedItem}
           />
         </div>
       </section>
 
       <CartSidebar
         cart={cart}
-        onAdd={addToCart}
+        onAdd={(item) => addToCart(item as CartItem)}
         onRemove={removeFromCart}
-        onPlaceOrder={() => alert('Order Placed Successfully!')}
+        onPlaceOrder={placeOrder}
+        isPlacingOrder={isPlacingOrder}
       />
+
+      {selectedItem && (
+        <CustomizationModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onConfirm={addToCart}
+        />
+      )}
     </main>
   );
 }

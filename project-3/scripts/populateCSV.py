@@ -70,14 +70,39 @@ drink_names = [
     "Guava Green Tea", "Caramel Milk Tea"
 ]
 
+drink_images = {
+"Classic Milk Tea": "https://images.unsplash.com/photo-1601489310882-d2fb4451dbcc?auto=format&fit=crop&q=80&w=800",
+  "Taro Milk Tea": "https://upload.wikimedia.org/wikipedia/commons/a/a3/Taro_flavored_milk_tea.jpg",
+  "Matcha Milk Tea": "https://images.unsplash.com/photo-1759363580278-058211df7102?auto=format&fit=crop&q=80&w=800",
+  "Thai Milk Tea": "https://images.unsplash.com/photo-1707578365460-f92c22d18a24?auto=format&fit=crop&q=80&w=800",
+  "Honeydew Milk Tea": "https://images.unsplash.com/photo-1773487743024-756afae04b87?auto=format&fit=crop&q=80&w=800",
+  "Brown Sugar Milk Tea": "https://images.unsplash.com/photo-1756132540944-ad87ca91f358?auto=format&fit=crop&q=80&w=800",
+  "Strawberry Milk Tea": "https://images.unsplash.com/photo-1647201201594-dff923210b3a?auto=format&fit=crop&q=80&w=800",
+  "Mango Milk Tea": "https://images.unsplash.com/photo-1546173159-315724a31696?auto=format&fit=crop&q=80&w=800",
+  "Oolong Milk Tea": "https://images.unsplash.com/photo-1652780080440-9067470afc94?auto=format&fit=crop&q=80&w=800",
+  "Wintermelon Tea": "https://images.unsplash.com/photo-1773487742962-987ec2f20bad?auto=format&fit=crop&q=80&w=800",
+  "Passionfruit Tea": "https://images.unsplash.com/photo-1606673993554-a5f993a16e0d?auto=format&fit=crop&q=80&w=800",
+  "Lychee Tea": "https://images.unsplash.com/photo-1599767431130-41b1c51d9a7b?auto=format&fit=crop&q=80&w=800",
+  "Peach Green Tea": "https://images.unsplash.com/photo-1694019835724-c8a1b92e37c7?auto=format&fit=crop&q=80&w=800",
+  "Coconut Milk Tea": "https://images.unsplash.com/photo-1645231286309-2beccdfae91c?auto=format&fit=crop&q=80&w=800",
+  "Almond Milk Tea": "https://images.unsplash.com/photo-1601436423474-51738541c1b1?auto=format&fit=crop&q=80&w=800",
+  "Coffee Milk Tea": "https://images.unsplash.com/photo-1637273484213-3b41dfbdcf99?auto=format&fit=crop&q=80&w=800",
+  "Red Bean Milk Tea": "https://images.unsplash.com/photo-1692263579137-31c58dd2b4a3?auto=format&fit=crop&q=80&w=800",
+  "Pineapple Tea": "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?auto=format&fit=crop&q=80&w=800",
+  "Guava Green Tea": "https://images.unsplash.com/photo-1536511132770-e5058c7e8c46?auto=format&fit=crop&q=80&w=800",
+  "Caramel Milk Tea": "https://images.unsplash.com/photo-1756132540944-ad87ca91f358?auto=format&fit=crop&q=80&w=800"
+}
+
 menu_items = []
 # Tracker to count total units sold for each menu item
 sales_tracker = {i + 1: 0 for i in range(NUM_MENU_ITEMS)}
 
 for i in range(NUM_MENU_ITEMS):
     price = round(random.uniform(4.50, 7.50), 2)
-    # [menuID, name, price, salesNum]
-    menu_items.append([i + 1, drink_names[i], price, 0])
+    name = drink_names[i]
+    image_url = drink_images.get(name, "")
+    # [menuID, name, price, salesNum, image_url]
+    menu_items.append([i + 1, name, price, 0, image_url])
 
 # --- MENU_ITEM (bridge table) ---
 menu_item_bridge = []
@@ -282,7 +307,7 @@ print("Total Revenue Generated:", round(total_revenue, 2))
 
 with open("menu.csv", "w", newline="") as f:
     writer = csv.writer(f)
-    writer.writerow(["menuID", "name", "cost", "salesNum"])
+    writer.writerow(["menuID", "name", "cost", "salesNum", "image_url"])
     writer.writerows(menu_items)
 
 with open("employee.csv", "w", newline="") as f:
@@ -297,7 +322,7 @@ with open("order.csv", "w", newline="") as f:
 
 with open("order_history.csv", "w", newline="") as f:
     writer = csv.writer(f)
-    writer.writerow(["ID", "menuID", "orderID", "quantity", "cost"])
+    writer.writerow(["ID", "menuID", "orderID", "quantity", "iceLevel", "sugarLevel", "topping", "cost"])
     writer.writerows(order_history)
 
 print("CSV files successfully generated.")

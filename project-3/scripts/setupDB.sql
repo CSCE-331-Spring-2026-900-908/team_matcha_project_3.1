@@ -18,7 +18,8 @@ CREATE TABLE menu (
     menuID SERIAL PRIMARY KEY, 
     name VARCHAR(100), 
     cost DECIMAL(10,2), 
-    salesNum INT
+    salesNum INT,
+    image_url VARCHAR(255)
 );
 
 CREATE TABLE employees (
