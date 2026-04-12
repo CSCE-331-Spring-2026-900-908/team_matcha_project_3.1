@@ -31,7 +31,42 @@ type PriceDistributionRow = {
   item_count: string;
 };
 
-export async function GET() {
+function isIsoDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function getDefaultDateRange() {
+  const now = new Date();
+  const end = now.toISOString().slice(0, 10);
+
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - 6);
+  const start = startDate.toISOString().slice(0, 10);
+
+  return { start, end };
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const defaultRange = getDefaultDateRange();
+
+  const startDate = searchParams.get('startDate') ?? defaultRange.start;
+  const endDate = searchParams.get('endDate') ?? defaultRange.end;
+
+  if (!isIsoDate(startDate) || !isIsoDate(endDate)) {
+    return NextResponse.json(
+      { error: 'Invalid date format. Use YYYY-MM-DD.' },
+      { status: 400 }
+    );
+  }
+
+  if (startDate > endDate) {
+    return NextResponse.json(
+      { error: 'Start date must be before or equal to end date.' },
+      { status: 400 }
+    );
+  }
+
   const client = await pool.connect();
 
   try {
@@ -44,7 +79,9 @@ export async function GET() {
             COALESCE(AVG(costtotal), 0)::numeric AS average_order_value,
             COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('pending', 'in progress', 'preparing'))::int AS pending_orders
           FROM orders
-          WHERE orderdatetime >= NOW() - INTERVAL '7 days';`
+          WHERE orderdatetime >= $1::date
+            AND orderdatetime < ($2::date + INTERVAL '1 day');`,
+          [startDate, endDate]
         ),
         client.query<DailyTrendRow>(
           `SELECT
@@ -52,9 +89,11 @@ export async function GET() {
             COALESCE(SUM(costtotal), 0)::numeric AS revenue,
             COUNT(*)::int AS orders
           FROM orders
-          WHERE orderdatetime >= NOW() - INTERVAL '7 days'
+          WHERE orderdatetime >= $1::date
+            AND orderdatetime < ($2::date + INTERVAL '1 day')
           GROUP BY DATE(orderdatetime)
-          ORDER BY DATE(orderdatetime) ASC;`
+          ORDER BY DATE(orderdatetime) ASC;`,
+          [startDate, endDate]
         ),
         client.query<TopSellerRow>(
           `SELECT
@@ -65,19 +104,23 @@ export async function GET() {
           FROM order_items oi
           JOIN orders o ON o.orderid = oi.orderid
           JOIN menu m ON m.menuid = oi.menuid
-          WHERE o.orderdatetime >= NOW() - INTERVAL '7 days'
+          WHERE o.orderdatetime >= $1::date
+            AND o.orderdatetime < ($2::date + INTERVAL '1 day')
           GROUP BY oi.menuid, m.name
           ORDER BY units_sold DESC, sales_amount DESC
-          LIMIT 5;`
+          LIMIT 5;`,
+          [startDate, endDate]
         ),
         client.query<HourlyTrendRow>(
           `SELECT
             EXTRACT(HOUR FROM orderdatetime)::int AS hour_of_day,
             COUNT(*)::int AS orders
           FROM orders
-          WHERE DATE(orderdatetime) = CURRENT_DATE
+          WHERE orderdatetime >= $1::date
+            AND orderdatetime < ($2::date + INTERVAL '1 day')
           GROUP BY EXTRACT(HOUR FROM orderdatetime)
-          ORDER BY hour_of_day ASC;`
+          ORDER BY hour_of_day ASC;`,
+          [startDate, endDate]
         ),
         client.query<PriceDistributionRow>(
           `SELECT
@@ -126,6 +169,10 @@ export async function GET() {
         label: row.bucket,
         count: Number(row.item_count),
       })),
+      period: {
+        startDate,
+        endDate,
+      },
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
