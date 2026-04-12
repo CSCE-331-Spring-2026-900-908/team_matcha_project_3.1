@@ -10,26 +10,14 @@ import {
   type CartItem,
 } from '@/components/pos-types';
 
-type Employee = {
-  employeeid: number;
-  name: string;
-};
-
-export default function EmployeePOSPage() {
+export default function KioskPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
-    null
-  );
-  const [customerName, setCustomerName] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadMenu() {
@@ -47,20 +35,6 @@ export default function EmployeePOSPage() {
       }
     }
     loadMenu();
-  }, []);
-
-  useEffect(() => {
-    async function loadEmployees() {
-      try {
-        const response = await fetch('/api/employees');
-        if (!response.ok) throw new Error('Failed to load employees.');
-        const data: Employee[] = await response.json();
-        setEmployees(data);
-      } catch {
-        console.error('Failed to load employees');
-      }
-    }
-    loadEmployees();
   }, []);
 
   const categories = useMemo(() => {
@@ -107,23 +81,20 @@ export default function EmployeePOSPage() {
     });
   };
 
-  const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
-  const costTotal = subtotal * 1.0825;
-
-  const handlePlaceOrder = async () => {
-    if (!selectedEmployeeId) {
-      alert('Please select an employee before placing an order.');
-      return;
-    }
+  const placeOrder = async () => {
+    if (cart.length === 0) return;
     setIsPlacingOrder(true);
     try {
+      const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
+      const costTotal = subtotal * 1.0825;
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          employeeID: selectedEmployeeId,
-          customerName: customerName.trim() || null,
-          costTotal: Math.round(costTotal * 100) / 100,
+          customerName: 'Kiosk Customer',
+          costTotal: costTotal,
+          employeeID: 1, // Default kiosk employee
           items: cart.map((item) => ({
             menuid: item.menuid,
             quantity: item.quantity,
@@ -134,11 +105,11 @@ export default function EmployeePOSPage() {
           })),
         }),
       });
+
       if (!response.ok) throw new Error('Failed to place order.');
-      const order = await response.json();
-      setOrderSuccess(order.orderid);
+      
+      alert('Order Placed Successfully!');
       setCart([]);
-      setCustomerName('');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to place order.');
     } finally {
@@ -160,24 +131,13 @@ export default function EmployeePOSPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight">
-                Cashier POS
+                Kiosk Ordering
               </h1>
             </div>
-            <div className="flex items-center gap-3">
-              <select
-                value={selectedEmployeeId ?? ''}
-                onChange={(e) =>
-                  setSelectedEmployeeId(Number(e.target.value) || null)
-                }
-                className="rounded-xl border border-[#eadfce] bg-[#f8f1e7] px-4 py-2 text-sm font-semibold text-[#2f241d] focus:outline-none focus:ring-2 focus:ring-[#2f7a5f]"
-              >
-                <option value="">Select Employee</option>
-                {employees.map((emp) => (
-                  <option key={emp.employeeid} value={emp.employeeid}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
+            <div className="hidden sm:block">
+              <span className="rounded-full bg-[#f8f1e7] px-4 py-2 text-sm font-medium text-[#8a6240]">
+                Self Service
+              </span>
             </div>
           </div>
 
@@ -211,29 +171,8 @@ export default function EmployeePOSPage() {
         cart={cart}
         onAdd={(item) => addToCart(item as CartItem)}
         onRemove={removeFromCart}
-        onPlaceOrder={handlePlaceOrder}
+        onPlaceOrder={placeOrder}
         isPlacingOrder={isPlacingOrder}
-        extraFields={
-          <div className="space-y-3 pb-2">
-            {orderSuccess && (
-              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
-                Order #{orderSuccess} placed successfully!
-              </div>
-            )}
-            <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-[#8a6240]">
-                Customer Name
-              </label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Optional"
-                className="mt-1 w-full rounded-xl border border-[#eadfce] bg-white px-4 py-2 text-sm text-[#2f241d] placeholder-[#b8a898] focus:outline-none focus:ring-2 focus:ring-[#2f7a5f]"
-              />
-            </div>
-          </div>
-        }
       />
 
       {selectedItem && (
