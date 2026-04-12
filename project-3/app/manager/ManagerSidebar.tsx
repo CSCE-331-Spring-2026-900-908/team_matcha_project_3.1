@@ -14,6 +14,12 @@ const tools: Array<{
   description: string;
 }> = [
   {
+    id: 'analytics',
+    eyebrow: 'Sales insights',
+    title: 'Analytics',
+    description: 'Revenue trends, top sellers, and order velocity.',
+  },
+  {
     id: 'inventory',
     eyebrow: 'Live stock view',
     title: 'Inventory',
