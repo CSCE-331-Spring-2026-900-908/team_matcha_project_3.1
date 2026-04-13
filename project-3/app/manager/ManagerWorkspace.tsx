@@ -5,8 +5,9 @@ import AnalyticsPage from '@/app/manager/AnalyticsPage';
 import EmployeesPage from '@/app/manager/EmployeesPage';
 import InventoryPage from '@/app/manager/InventoryPage';
 import ManagerSidebar from '@/app/manager/ManagerSidebar';
+import ReportsPage from '@/app/manager/ReportsPage';
 
-export type ManagerTool = 'analytics' | 'inventory' | 'employees';
+export type ManagerTool = 'analytics' | 'reports' | 'inventory' | 'employees';
 
 export default function ManagerWorkspace() {
   const [selectedTool, setSelectedTool] = useState<ManagerTool>('analytics');
@@ -30,6 +31,7 @@ export default function ManagerWorkspace() {
               onSelect={setSelectedTool}
             />
             {selectedTool === 'analytics' ? <AnalyticsPage /> : null}
+            {selectedTool === 'reports' ? <ReportsPage /> : null}
             {selectedTool === 'inventory' ? <InventoryPage /> : null}
             {selectedTool === 'employees' ? <EmployeesPage /> : null}
           </div>
