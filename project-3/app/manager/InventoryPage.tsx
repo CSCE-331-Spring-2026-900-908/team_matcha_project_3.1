@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 type InventoryItem = {
   inventoryId: number;
@@ -30,6 +31,7 @@ export default function InventoryPage() {
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -67,6 +69,10 @@ export default function InventoryPage() {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
   }, []);
 
   const openEditModal = (item: InventoryItem) => {
@@ -265,124 +271,127 @@ export default function InventoryPage() {
         ) : null}
       </div>
 
-      {editModal ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[rgba(34,48,32,0.35)] px-4">
-          <div className="w-full max-w-md rounded-[28px] border border-[#d9e3d5] bg-white p-6 shadow-[0_22px_60px_rgba(31,37,32,0.20)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#667463]">
-                  Edit Inventory
-                </p>
-                <h3 className="mt-2 text-2xl font-bold text-[#223020]">
-                  {editModal.item.name}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={closeEditModal}
-                className="rounded-full border border-[#d9e3d5] px-3 py-1 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3]"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-6 space-y-5">
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-                  Cost
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editModal.cost}
-                  onChange={(event) =>
-                    setEditModal({
-                      ...editModal,
-                      cost: event.target.value,
-                    })
-                  }
-                  className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
-                />
-              </div>
-
-              <div className="rounded-[22px] border border-[#e4ece0] bg-[#f8fbf7] p-4">
-                <div className="flex items-center justify-between gap-4">
+      {editModal && isMounted
+        ? createPortal(
+            <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[rgba(34,48,32,0.35)] p-4">
+              <div className="w-full max-w-md rounded-[28px] border border-[#d9e3d5] bg-white p-6 shadow-[0_22px_60px_rgba(31,37,32,0.20)]">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-                      Current Stock
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#667463]">
+                      Edit Inventory
                     </p>
-                    <p className="mt-1 text-3xl font-bold text-[#223020]">
-                      {editModal.stagedStock}
-                    </p>
+                    <h3 className="mt-2 text-2xl font-bold text-[#223020]">
+                      {editModal.item.name}
+                    </h3>
                   </div>
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="rounded-full border border-[#d9e3d5] px-3 py-1 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3]"
+                  >
+                    Close
+                  </button>
+                </div>
 
-                  <div className="w-28">
+                <div className="mt-6 space-y-5">
+                  <div>
                     <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-                      Change By
+                      Cost
                     </label>
                     <input
                       type="number"
-                      min="1"
-                      step="1"
-                      value={editModal.stockChange}
+                      min="0"
+                      step="0.01"
+                      value={editModal.cost}
                       onChange={(event) =>
                         setEditModal({
                           ...editModal,
-                          stockChange: event.target.value,
+                          cost: event.target.value,
                         })
                       }
-                      className="mt-2 w-full rounded-[16px] border border-[#d8e2d3] bg-white px-3 py-2 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                      className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
                     />
                   </div>
-                </div>
 
-                <div className="mt-4 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => adjustStagedStock('add')}
-                    className="flex-1 rounded-full bg-[#2f7a5f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#28684f]"
-                  >
-                    Add Stock
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => adjustStagedStock('remove')}
-                    className="flex-1 rounded-full border border-[#d4ddd0] bg-white px-4 py-2 text-sm font-semibold text-[#7a453d] transition hover:bg-[#fcf3f1]"
-                  >
-                    Remove Stock
-                  </button>
+                  <div className="rounded-[22px] border border-[#e4ece0] bg-[#f8fbf7] p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                          Current Stock
+                        </p>
+                        <p className="mt-1 text-3xl font-bold text-[#223020]">
+                          {editModal.stagedStock}
+                        </p>
+                      </div>
+
+                      <div className="w-28">
+                        <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                          Change By
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={editModal.stockChange}
+                          onChange={(event) =>
+                            setEditModal({
+                              ...editModal,
+                              stockChange: event.target.value,
+                            })
+                          }
+                          className="mt-2 w-full rounded-[16px] border border-[#d8e2d3] bg-white px-3 py-2 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => adjustStagedStock('add')}
+                        className="flex-1 rounded-full bg-[#2f7a5f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#28684f]"
+                      >
+                        Add Stock
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => adjustStagedStock('remove')}
+                        className="flex-1 rounded-full border border-[#d4ddd0] bg-white px-4 py-2 text-sm font-semibold text-[#7a453d] transition hover:bg-[#fcf3f1]"
+                      >
+                        Remove Stock
+                      </button>
+                    </div>
+                  </div>
+
+                  {saveError ? (
+                    <div className="rounded-[18px] border border-[#e0b1aa] bg-[#fff2f0] px-4 py-3 text-sm text-[#91463d]">
+                      {saveError}
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={closeEditModal}
+                      disabled={isSaving}
+                      className="rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              {saveError ? (
-                <div className="rounded-[18px] border border-[#e0b1aa] bg-[#fff2f0] px-4 py-3 text-sm text-[#91463d]">
-                  {saveError}
-                </div>
-              ) : null}
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  disabled={isSaving}
-                  className="rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body
+          )
+        : null}
     </section>
   );
 }
