@@ -5,9 +5,15 @@ type Props = {
   items: MenuItem[];
   error: string | null;
   onSelectItem: (item: MenuItem) => void;
+  showAddIcon?: boolean;
 };
 
-export default function MenuGrid({ items, error, onSelectItem }: Props) {
+export default function MenuGrid({
+  items,
+  error,
+  onSelectItem,
+  showAddIcon = true,
+}: Props) {
   return (
     <>
       {error ? (
@@ -44,11 +50,13 @@ export default function MenuGrid({ items, error, onSelectItem }: Props) {
                   <p className="text-lg font-bold text-[#2f7a5f]">
                     {currencyFormatter.format(item.cost)}
                   </p>
-                  <div className="rounded-full bg-[#f8f1e7] p-1 text-[#2f7a5f] group-hover:bg-[#2f7a5f] group-hover:text-white transition-colors">
-                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M12 6v12m-6-6h12" />
-                    </svg>
-                  </div>
+                  {showAddIcon && (
+                    <div className="rounded-full bg-[#f8f1e7] p-1 text-[#2f7a5f] group-hover:bg-[#2f7a5f] group-hover:text-white transition-colors">
+                      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 6v12m-6-6h12" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
               </div>
             </button>
