@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { PoolClient } from 'pg';
 import pool from '@/lib/db';
 
 type SummaryRow = {
@@ -19,7 +20,7 @@ type ZRunLogRow = {
 };
 
 async function hasStatusColumn(
-  client: Awaited<ReturnType<typeof pool.connect>>
+  client: PoolClient
 ) {
   const result = await client.query<{ exists: boolean }>(
     `SELECT EXISTS (
@@ -34,7 +35,7 @@ async function hasStatusColumn(
 }
 
 async function getReportSnapshot(
-  client: Awaited<ReturnType<typeof pool.connect>>,
+  client: PoolClient,
   targetDate: string,
   supportsStatus: boolean
 ) {
