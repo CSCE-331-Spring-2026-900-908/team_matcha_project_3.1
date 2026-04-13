@@ -1,14 +1,15 @@
 'use client';
 
-import { currencyFormatter, type CartItem, type MenuItem } from './pos-types';
+import { currencyFormatter, type CartItem } from './pos-types';
 
 type Props = {
   cart: CartItem[];
-  onAdd: (item: MenuItem) => void;
+  onAdd: (item: CartItem) => void;
   onRemove: (menuid: number) => void;
   onPlaceOrder: () => void;
   isPlacingOrder?: boolean;
   extraFields?: React.ReactNode;
+  onEditItem?: (index: number) => void;
 };
 
 export default function CartSidebar({
@@ -18,6 +19,7 @@ export default function CartSidebar({
   onPlaceOrder,
   isPlacingOrder = false,
   extraFields,
+  onEditItem,
 }: Props) {
   const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -58,24 +60,34 @@ export default function CartSidebar({
                     {currencyFormatter.format(item.cost)}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 rounded-lg border border-[#eadfce] bg-white p-1">
-                  <button
-                    onClick={() => onRemove(item.menuid)}
-                    className="flex h-8 w-8 items-center justify-center text-[#8a6240] hover:text-red-600 transition-colors"
-                  >
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M18 12H6" />
-                    </svg>
-                  </button>
-                  <span className="w-4 text-center font-bold text-sm">{item.quantity}</span>
-                  <button
-                    onClick={() => onAdd(item)}
-                    className="flex h-8 w-8 items-center justify-center text-[#2f7a5f]"
-                  >
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M12 6v12m-6-6h12" />
-                    </svg>
-                  </button>
+                <div className="flex flex-col items-end gap-2">
+                  {onEditItem && (
+                    <button
+                      onClick={() => onEditItem(index)}
+                      className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#2f7a5f] shadow-sm ring-1 ring-[#eadfce] transition-colors hover:bg-[#f8f1e7]"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  <div className="flex items-center gap-3 rounded-lg border border-[#eadfce] bg-white p-1">
+                    <button
+                      onClick={() => onRemove(item.menuid)}
+                      className="flex h-8 w-8 items-center justify-center text-[#8a6240] hover:text-red-600 transition-colors"
+                    >
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M18 12H6" />
+                      </svg>
+                    </button>
+                    <span className="w-4 text-center font-bold text-sm">{item.quantity}</span>
+                    <button
+                      onClick={() => onAdd(item)}
+                      className="flex h-8 w-8 items-center justify-center text-[#2f7a5f]"
+                    >
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 6v12m-6-6h12" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
