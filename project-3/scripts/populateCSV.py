@@ -71,26 +71,26 @@ drink_names = [
 ]
 
 drink_images = {
-"Classic Milk Tea": "https://images.unsplash.com/photo-1601489310882-d2fb4451dbcc?auto=format&fit=crop&q=80&w=800",
-  "Taro Milk Tea": "https://upload.wikimedia.org/wikipedia/commons/a/a3/Taro_flavored_milk_tea.jpg",
-  "Matcha Milk Tea": "https://images.unsplash.com/photo-1759363580278-058211df7102?auto=format&fit=crop&q=80&w=800",
-  "Thai Milk Tea": "https://images.unsplash.com/photo-1707578365460-f92c22d18a24?auto=format&fit=crop&q=80&w=800",
-  "Honeydew Milk Tea": "https://images.unsplash.com/photo-1773487743024-756afae04b87?auto=format&fit=crop&q=80&w=800",
-  "Brown Sugar Milk Tea": "https://images.unsplash.com/photo-1756132540944-ad87ca91f358?auto=format&fit=crop&q=80&w=800",
-  "Strawberry Milk Tea": "https://images.unsplash.com/photo-1647201201594-dff923210b3a?auto=format&fit=crop&q=80&w=800",
-  "Mango Milk Tea": "https://images.unsplash.com/photo-1546173159-315724a31696?auto=format&fit=crop&q=80&w=800",
-  "Oolong Milk Tea": "https://images.unsplash.com/photo-1652780080440-9067470afc94?auto=format&fit=crop&q=80&w=800",
-  "Wintermelon Tea": "https://images.unsplash.com/photo-1773487742962-987ec2f20bad?auto=format&fit=crop&q=80&w=800",
-  "Passionfruit Tea": "https://images.unsplash.com/photo-1606673993554-a5f993a16e0d?auto=format&fit=crop&q=80&w=800",
-  "Lychee Tea": "https://images.unsplash.com/photo-1599767431130-41b1c51d9a7b?auto=format&fit=crop&q=80&w=800",
-  "Peach Green Tea": "https://images.unsplash.com/photo-1694019835724-c8a1b92e37c7?auto=format&fit=crop&q=80&w=800",
-  "Coconut Milk Tea": "https://images.unsplash.com/photo-1645231286309-2beccdfae91c?auto=format&fit=crop&q=80&w=800",
-  "Almond Milk Tea": "https://images.unsplash.com/photo-1601436423474-51738541c1b1?auto=format&fit=crop&q=80&w=800",
-  "Coffee Milk Tea": "https://images.unsplash.com/photo-1637273484213-3b41dfbdcf99?auto=format&fit=crop&q=80&w=800",
-  "Red Bean Milk Tea": "https://images.unsplash.com/photo-1692263579137-31c58dd2b4a3?auto=format&fit=crop&q=80&w=800",
-  "Pineapple Tea": "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?auto=format&fit=crop&q=80&w=800",
-  "Guava Green Tea": "https://images.unsplash.com/photo-1536511132770-e5058c7e8c46?auto=format&fit=crop&q=80&w=800",
-  "Caramel Milk Tea": "https://images.unsplash.com/photo-1756132540944-ad87ca91f358?auto=format&fit=crop&q=80&w=800"
+  "Classic Milk Tea": "https://th.bing.com/th/id/OIP.8xXkdh0DnYN3x8m6aZJHpgHaLH?w=127&h=190&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3",
+  "Taro Milk Tea": "https://theoregondietitian.com/wp-content/uploads/2022/04/TaroMilkTea-1200-x-1200.jpg",
+  "Matcha Milk Tea": "https://bestrecipesite.com/wp-content/uploads/2025/12/3-7.png",
+  "Thai Milk Tea": "https://thai-foodie.com/wp-content/uploads/2024/09/thai-milk-tea.jpg",
+  "Honeydew Milk Tea": "https://i.pinimg.com/originals/2e/17/2a/2e172a821300507745936d8765011cd8.jpg",
+  "Brown Sugar Milk Tea": "https://www.alaynarecipes.com/wp-content/uploads/2025/12/x3by70tpodgucng1a1ik.webp",
+  "Strawberry Milk Tea": "https://wellbeingbarista.com/wp-content/uploads/2023/09/strawberry_milk_tea.jpg",
+  "Mango Milk Tea": "https://theoregondietitian.com/wp-content/uploads/2025/03/MangoMilkTea5-1200x1800-1-1024x1536.jpg",
+  "Oolong Milk Tea": "https://ohsweetcups.com/wp-content/uploads/2023/06/627hookok-2.webp",
+  "Wintermelon Tea": "https://homecozymagic.com/wp-content/uploads/2025/10/xcw73qpkz9tsteq03exy.webp",
+  "Passionfruit Tea": "https://lastminrecipes.com/assets/images/1738869965154-bwcfgpxf.webp",
+  "Lychee Tea": "https://hongthaimee.com/wp-content/uploads/2025/03/Lychee-Thai-Iced-Tea.png",
+  "Peach Green Tea": "https://nutritiontofit.com/wp-content/uploads/2016/07/Peachy-Mint-Iced-Green-Tea.jpg",
+  "Coconut Milk Tea": "https://img.freepik.com/premium-photo/photo-coconut-milk-tea-milky-tea-infused-with-coconut-flavor-toppe-front-view-clean-bg_655090-971803.jpg",
+  "Almond Milk Tea": "https://balancewithjess.com/wp-content/uploads/2022/07/Almond-Milk-Tea-Feat.jpg",
+  "Coffee Milk Tea": "https://tse1.mm.bing.net/th/id/OIP.8T7RoLDe7hAOnBqx4LDfhAHaJQ?rs=1&pid=ImgDetMain&o=7&rm=3",
+  "Red Bean Milk Tea": "https://tse4.mm.bing.net/th/id/OIP.I5ek2jfGjLwdhhH2VmBbWwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3",
+  "Pineapple Tea": "https://bakewithshivesh.com/wp-content/uploads/2022/05/IMG-9753-scaled.jpg",
+  "Guava Green Tea": "https://static.vecteezy.com/system/resources/previews/055/450/992/large_2x/refreshing-green-bubble-tea-featuring-chewy-tapioca-pearls-on-a-bright-white-background-green-bubble-tea-isolated-on-white-background-free-png.png",
+  "Caramel Milk Tea": "https://foodsguy.com/wp-content/uploads/2022/04/pexels-kim-cruz-4071422-scaled.jpg"
 }
 
 menu_items = []
