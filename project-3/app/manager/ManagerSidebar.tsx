@@ -20,6 +20,12 @@ const tools: Array<{
     description: 'Revenue trends, top sellers, and order velocity.',
   },
   {
+    id: 'reports',
+    eyebrow: 'Daily closeout',
+    title: 'X / Z Reports',
+    description: 'Run read-only X reports and one-time daily Z closeout.',
+  },
+  {
     id: 'inventory',
     eyebrow: 'Live stock view',
     title: 'Inventory',
