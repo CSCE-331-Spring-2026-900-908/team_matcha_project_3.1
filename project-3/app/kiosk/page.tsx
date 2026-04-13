@@ -10,13 +10,23 @@ import {
   type CartItem,
 } from '@/components/pos-types';
 
+type ModalState =
+  | { mode: 'add'; item: MenuItem }
+  | { mode: 'edit'; item: CartItem; index: number };
+
+const hasSameCustomization = (first: CartItem, second: CartItem) =>
+  first.menuid === second.menuid &&
+  first.iceLevel === second.iceLevel &&
+  first.sugarLevel === second.sugarLevel &&
+  first.topping === second.topping;
+
 export default function KioskPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [modalState, setModalState] = useState<ModalState | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   useEffect(() => {
@@ -47,23 +57,67 @@ export default function KioskPage() {
     return items.filter((item) => categorizeItem(item.name) === activeCategory);
   }, [items, activeCategory]);
 
+  const closeModal = () => setModalState(null);
+
   const addToCart = (customizedItem: CartItem) => {
     setCart((prev) => {
-      const existing = prev.find(
-        (i) =>
-          i.menuid === customizedItem.menuid &&
-          i.iceLevel === customizedItem.iceLevel &&
-          i.sugarLevel === customizedItem.sugarLevel &&
-          i.topping === customizedItem.topping
+      const existingIndex = prev.findIndex((item) =>
+        hasSameCustomization(item, customizedItem)
       );
-      if (existing) {
-        return prev.map((i) =>
-          i === existing ? { ...i, quantity: i.quantity + 1 } : i
+
+      if (existingIndex !== -1) {
+        return prev.map((item, index) =>
+          index === existingIndex
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
         );
       }
+
       return [...prev, { ...customizedItem, quantity: 1 }];
     });
-    setSelectedItem(null);
+    closeModal();
+  };
+
+  const saveEditedCartItem = (customizedItem: CartItem) => {
+    if (!modalState || modalState.mode !== 'edit') return;
+
+    setCart((prev) => {
+      const editedItem = prev[modalState.index];
+      if (!editedItem) return prev;
+
+      const updatedItem: CartItem = {
+        ...customizedItem,
+        quantity: editedItem.quantity,
+      };
+
+      const matchingIndex = prev.findIndex(
+        (item, index) =>
+          index !== modalState.index && hasSameCustomization(item, updatedItem)
+      );
+
+      if (matchingIndex === -1) {
+        return prev.map((item, index) =>
+          index === modalState.index ? updatedItem : item
+        );
+      }
+
+      return prev.reduce<CartItem[]>((next, item, index) => {
+        if (index === modalState.index) return next;
+
+        if (index === matchingIndex) {
+          next.push({
+            ...item,
+            quantity: item.quantity + updatedItem.quantity,
+          });
+          return next;
+        }
+
+        next.push(item);
+        return next;
+      }, []);
+    });
+
+    closeModal();
   };
 
   const removeFromCart = (menuid: number) => {
@@ -162,24 +216,50 @@ export default function KioskPage() {
           <MenuGrid
             items={filteredItems}
             error={error}
-            onSelectItem={setSelectedItem}
+            onSelectItem={(item) => setModalState({ mode: 'add', item })}
           />
         </div>
       </section>
 
       <CartSidebar
         cart={cart}
-        onAdd={(item) => addToCart(item as CartItem)}
+        onAdd={addToCart}
         onRemove={removeFromCart}
         onPlaceOrder={placeOrder}
         isPlacingOrder={isPlacingOrder}
+        onEditItem={(index) => {
+          const item = cart[index];
+          if (!item) return;
+
+          setModalState({ mode: 'edit', item, index });
+        }}
       />
 
-      {selectedItem && (
+      {modalState && (
         <CustomizationModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onConfirm={addToCart}
+          key={
+            modalState.mode === 'edit'
+              ? `edit-${modalState.index}`
+              : `add-${modalState.item.menuid}`
+          }
+          item={modalState.item}
+          onClose={closeModal}
+          onConfirm={
+            modalState.mode === 'edit' ? saveEditedCartItem : addToCart
+          }
+          initialIceLevel={
+            modalState.mode === 'edit' ? modalState.item.iceLevel : undefined
+          }
+          initialSugarLevel={
+            modalState.mode === 'edit' ? modalState.item.sugarLevel : undefined
+          }
+          initialTopping={
+            modalState.mode === 'edit' ? modalState.item.topping : undefined
+          }
+          confirmLabel={
+            modalState.mode === 'edit' ? 'Save Changes' : 'Add to Order'
+          }
+          presentation="fullscreen"
         />
       )}
     </main>
