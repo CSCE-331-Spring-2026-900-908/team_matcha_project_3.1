@@ -77,7 +77,7 @@ export async function GET(request: Request) {
             COUNT(*)::int AS total_orders,
             COALESCE(SUM(costtotal), 0)::numeric AS total_revenue,
             COALESCE(AVG(costtotal), 0)::numeric AS average_order_value,
-            COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('pending', 'in progress', 'preparing'))::int AS pending_orders
+            0::int AS pending_orders
           FROM orders
           WHERE orderdatetime >= $1::date
             AND orderdatetime < ($2::date + INTERVAL '1 day');`,

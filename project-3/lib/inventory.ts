@@ -7,29 +7,7 @@ export type InventoryItem = {
   inventoryNum: number;
   useAverage: number;
   daysLeft: number | null;
-  status: 'In Stock' | 'Low Soon' | 'Low Stock';
 };
-
-function getInventoryStatus(
-  inventoryNum: number,
-  useAverage: number
-): InventoryItem['status'] {
-  if (useAverage <= 0) {
-    return inventoryNum <= 0 ? 'Low Stock' : 'In Stock';
-  }
-
-  const daysLeft = inventoryNum / useAverage;
-
-  if (daysLeft <= 14) {
-    return 'Low Stock';
-  }
-
-  if (daysLeft <= 45) {
-    return 'Low Soon';
-  }
-
-  return 'In Stock';
-}
 
 export async function getInventoryItems(): Promise<InventoryItem[]> {
   const client = await pool.connect();
@@ -50,7 +28,6 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
         inventoryNum,
         useAverage,
         daysLeft: useAverage > 0 ? Math.floor(inventoryNum / useAverage) : null,
-        status: getInventoryStatus(inventoryNum, useAverage),
       };
     });
   } finally {

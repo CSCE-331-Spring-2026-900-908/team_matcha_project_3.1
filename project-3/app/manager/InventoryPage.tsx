@@ -9,19 +9,12 @@ type InventoryItem = {
   inventoryNum: number;
   useAverage: number;
   daysLeft: number | null;
-  status: 'In Stock' | 'Low Soon' | 'Low Stock';
 };
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
 });
-
-const statusClasses: Record<InventoryItem['status'], string> = {
-  'In Stock': 'border-[#cfe3cc] bg-[#eef8ec] text-[#2f6d2a]',
-  'Low Soon': 'border-[#ead5a3] bg-[#fff7e2] text-[#8b671c]',
-  'Low Stock': 'border-[#e7b8b2] bg-[#fff1ef] text-[#97463c]',
-};
 
 export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -100,7 +93,7 @@ export default function InventoryPage() {
 
         {!isLoading && !error && items.length > 0 ? (
           <div className="overflow-visible rounded-[28px] border border-[#d9e3d5] bg-white">
-            <div className="hidden grid-cols-[1.8fr_1fr_1fr_1fr_1fr_1fr] gap-4 rounded-t-[28px] border-b border-[#dfe8da] bg-[#edf4ea] px-6 py-4 text-xs font-bold uppercase tracking-[0.22em] text-[#6c7968] lg:grid">
+            <div className="hidden grid-cols-[1.8fr_1fr_1fr_1fr_1fr] gap-4 rounded-t-[28px] border-b border-[#dfe8da] bg-[#edf4ea] px-6 py-4 text-xs font-bold uppercase tracking-[0.22em] text-[#6c7968] lg:grid">
               <span>Ingredient / Stock Item</span>
               <span>Cost</span>
               <span>Current Stock</span>
@@ -113,14 +106,13 @@ export default function InventoryPage() {
                   Current stock divided by average use.
                 </span>
               </span>
-              <span>Status</span>
             </div>
 
             <div className="divide-y divide-[#ebf0e8]">
               {items.map((item) => (
                 <article
                   key={item.inventoryId}
-                  className="grid gap-4 px-6 py-5 lg:grid-cols-[1.8fr_1fr_1fr_1fr_1fr_1fr] lg:items-center"
+                  className="grid gap-4 px-6 py-5 lg:grid-cols-[1.8fr_1fr_1fr_1fr_1fr] lg:items-center"
                 >
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
@@ -165,17 +157,6 @@ export default function InventoryPage() {
                     <p className="text-sm font-medium text-[#586756] sm:text-base">
                       {item.daysLeft ?? 'N/A'}
                     </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
-                      Status
-                    </p>
-                    <span
-                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClasses[item.status]}`}
-                    >
-                      {item.status}
-                    </span>
                   </div>
                 </article>
               ))}
