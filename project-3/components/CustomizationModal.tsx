@@ -16,10 +16,18 @@ type Props = {
 
 const ICE_LEVELS = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
 const SUGAR_LEVELS = ['0%', '25%', '50%', '75%', '100%'];
-const TOPPINGS = ['None', 'Boba', 'Pudding', 'Grass Jelly', 'Red Bean', 'Aloe Vera'];
 const DEFAULT_ICE_LEVEL = 'Regular Ice';
 const DEFAULT_SUGAR_LEVEL = '100%';
 const DEFAULT_TOPPING = 'None';
+const TOPPING_COSTS: Record<string, number> = {
+  None: 0,
+  Boba: 0.5,
+  Pudding: 0.6,
+  'Grass Jelly': 0.5,
+  'Red Bean': 0.5,
+  'Aloe Vera': 0.7,
+};
+const TOPPINGS = Object.keys(TOPPING_COSTS);
 
 export default function CustomizationModal({
   item,
@@ -35,9 +43,13 @@ export default function CustomizationModal({
   const [sugarLevel, setSugarLevel] = useState(initialSugarLevel ?? DEFAULT_SUGAR_LEVEL);
   const [topping, setTopping] = useState(initialTopping ?? DEFAULT_TOPPING);
 
+  const toppingCost = TOPPING_COSTS[topping] || 0;
+  const totalCost = item.cost + toppingCost;
+
   const handleConfirm = () => {
     onConfirm({
       ...item,
+      cost: totalCost,
       quantity: 1,
       iceLevel,
       sugarLevel,
@@ -90,9 +102,16 @@ export default function CustomizationModal({
                   <h2 className="mt-3 text-4xl font-bold text-[#2f241d] sm:text-5xl">
                     {item.name}
                   </h2>
-                  <p className="mt-3 text-2xl font-semibold text-[#2f7a5f]">
-                    {currencyFormatter.format(item.cost)}
-                  </p>
+                  <div className="flex items-center gap-4 mt-3">
+                    <p className="text-3xl font-semibold text-[#2f7a5f]">
+                      {currencyFormatter.format(totalCost)}
+                    </p>
+                    {toppingCost > 0 && (
+                      <span className="text-sm font-bold text-[#8a6240] bg-[#f8f1e7] px-4 py-1 rounded-full border border-[#eadfce]">
+                        Includes {currencyFormatter.format(toppingCost)} add-on
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-8 space-y-6">
@@ -107,7 +126,7 @@ export default function CustomizationModal({
                           onClick={() => setIceLevel(level)}
                           className={`rounded-full px-5 py-3 text-base font-semibold transition-all ${
                             iceLevel === level
-                              ? 'bg-[#2f7a5f] text-white'
+                              ? 'bg-[#2f7a5f] text-white shadow-lg'
                               : 'bg-[#f8f1e7] text-[#6f5848] hover:bg-[#eadfce]'
                           }`}
                         >
@@ -128,7 +147,7 @@ export default function CustomizationModal({
                           onClick={() => setSugarLevel(level)}
                           className={`rounded-full px-5 py-3 text-base font-semibold transition-all ${
                             sugarLevel === level
-                              ? 'bg-[#2f7a5f] text-white'
+                              ? 'bg-[#2f7a5f] text-white shadow-lg'
                               : 'bg-[#f8f1e7] text-[#6f5848] hover:bg-[#eadfce]'
                           }`}
                         >
@@ -149,11 +168,16 @@ export default function CustomizationModal({
                           onClick={() => setTopping(t)}
                           className={`rounded-full px-5 py-3 text-base font-semibold transition-all ${
                             topping === t
-                              ? 'bg-[#2f7a5f] text-white'
+                              ? 'bg-[#2f7a5f] text-white shadow-lg'
                               : 'bg-[#f8f1e7] text-[#6f5848] hover:bg-[#eadfce]'
                           }`}
                         >
                           {t}
+                          {TOPPING_COSTS[t] > 0 && (
+                            <span className="ml-1.5 opacity-60">
+                              (+{currencyFormatter.format(TOPPING_COSTS[t])})
+                            </span>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -199,7 +223,14 @@ export default function CustomizationModal({
 
         <div className="p-6">
           <h2 className="text-2xl font-bold text-[#2f241d]">{item.name}</h2>
-          <p className="mt-1 text-lg font-semibold text-[#2f7a5f]">{currencyFormatter.format(item.cost)}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-lg font-semibold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
+            {toppingCost > 0 && (
+              <span className="text-xs font-medium text-[#8a6240] bg-[#f8f1e7] px-2 py-0.5 rounded-full">
+                Includes {currencyFormatter.format(toppingCost)} add-on
+              </span>
+            )}
+          </div>
 
           <div className="mt-6 space-y-6">
             {/* Ice Level */}
@@ -257,6 +288,11 @@ export default function CustomizationModal({
                     }`}
                   >
                     {t}
+                    {TOPPING_COSTS[t] > 0 && (
+                      <span className="ml-1 opacity-60">
+                        (+{currencyFormatter.format(TOPPING_COSTS[t])})
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
