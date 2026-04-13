@@ -217,6 +217,7 @@ export default function KioskPage() {
             items={filteredItems}
             error={error}
             onSelectItem={(item) => setModalState({ mode: 'add', item })}
+            showAddIcon={false}
           />
         </div>
       </section>
