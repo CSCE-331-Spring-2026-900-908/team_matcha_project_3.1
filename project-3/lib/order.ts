@@ -1,7 +1,9 @@
+import type { PoolClient } from 'pg';
+
 import pool from '@/lib/db';
 
 async function syncSequence(
-  connection: Awaited<ReturnType<typeof pool.connect>>,
+  connection: PoolClient,
   tableName: string,
   columnName: string
 ) {

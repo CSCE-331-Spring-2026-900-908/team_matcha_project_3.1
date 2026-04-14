@@ -1,3 +1,5 @@
+import type { PoolClient } from 'pg';
+
 import pool from '@/lib/db';
 
 export type InventoryItem = {
@@ -31,9 +33,7 @@ function mapInventoryRow(row: InventoryRow): InventoryItem {
   };
 }
 
-async function syncInventorySequence(
-  client: Awaited<ReturnType<typeof pool.connect>>
-) {
+async function syncInventorySequence(client: PoolClient) {
   await client.query(
     `SELECT setval(
       pg_get_serial_sequence('inventory', 'inventoryid'),
