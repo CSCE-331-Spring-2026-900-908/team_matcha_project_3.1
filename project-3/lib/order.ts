@@ -1,5 +1,20 @@
 import pool from '@/lib/db';
 
+async function syncSequence(
+  connection: Awaited<ReturnType<typeof pool.connect>>,
+  tableName: string,
+  columnName: string
+) {
+  await connection.query(
+    `SELECT setval(
+      pg_get_serial_sequence($1, $2),
+      COALESCE((SELECT MAX(${columnName}) FROM ${tableName}), 0) + 1,
+      false
+    );`,
+    [tableName, columnName]
+  );
+}
+
 export async function createOrder(
   customerName: string,
   costTotal: number,
@@ -16,11 +31,15 @@ export async function createOrder(
   const connection = await pool.connect();
   try {
     await connection.query('BEGIN');
+    await syncSequence(connection, 'orders', 'orderid');
+
     const result = await connection.query(
       'INSERT INTO orders (customername, costtotal, employeeid) VALUES ($1, $2, $3) RETURNING orderid',
       [customerName, costTotal, employeeID]
     );
     const orderId = result.rows[0].orderid;
+
+    await syncSequence(connection, 'order_items', 'id');
 
     for (const item of items) {
       await connection.query(

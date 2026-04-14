@@ -24,6 +24,18 @@ type EditModalState = {
   stockChange: string;
 };
 
+type NewItemForm = {
+  name: string;
+  cost: string;
+  inventoryNum: string;
+};
+
+const defaultNewItemForm = (): NewItemForm => ({
+  name: '',
+  cost: '',
+  inventoryNum: '',
+});
+
 export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +44,12 @@ export default function InventoryPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newItemForm, setNewItemForm] = useState<NewItemForm>(
+    defaultNewItemForm()
+  );
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -89,6 +107,18 @@ export default function InventoryPage() {
     if (isSaving) return;
     setEditModal(null);
     setSaveError(null);
+  };
+
+  const openCreateModal = () => {
+    setCreateError(null);
+    setNewItemForm(defaultNewItemForm());
+    setIsCreateModalOpen(true);
+  };
+
+  const closeCreateModal = () => {
+    if (isCreating) return;
+    setIsCreateModalOpen(false);
+    setCreateError(null);
   };
 
   const adjustStagedStock = (direction: 'add' | 'remove') => {
@@ -154,10 +184,68 @@ export default function InventoryPage() {
     }
   };
 
+  const handleCreate = async () => {
+    const name = newItemForm.name.trim();
+    const cost = Number(newItemForm.cost);
+    const inventoryNum = Number(newItemForm.inventoryNum);
+
+    if (!name) {
+      setCreateError('Enter a name for the inventory item.');
+      return;
+    }
+
+    if (!Number.isFinite(cost) || !Number.isFinite(inventoryNum)) {
+      setCreateError('Enter valid numbers for cost and stock.');
+      return;
+    }
+
+    if (cost < 0 || inventoryNum < 0) {
+      setCreateError('Cost and stock must be zero or greater.');
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateError(null);
+
+    try {
+      const response = await fetch('/api/manager/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          cost,
+          inventoryNum,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create inventory item.');
+      }
+
+      setItems((prev) =>
+        [...prev, data].sort((first, second) =>
+          first.name.localeCompare(second.name)
+        )
+      );
+      setIsCreateModalOpen(false);
+      setNewItemForm(defaultNewItemForm());
+    } catch (createFailure) {
+      setCreateError(
+        createFailure instanceof Error
+          ? createFailure.message
+          : 'Failed to create inventory item.'
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <section className="rounded-[32px] border border-[#cfd9ca] bg-[#f7faf5] p-6 shadow-[0_18px_50px_rgba(31,37,32,0.06)] sm:p-8">
       <div className="flex flex-col gap-6">
-        <div className="border-b border-[#dbe4d6] pb-6">
+        <div className="flex flex-col gap-4 border-b border-[#dbe4d6] pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#667463]">
               Inventory
@@ -166,6 +254,13 @@ export default function InventoryPage() {
               Ingredient and stock overview
             </h2>
           </div>
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="mt-3 inline-flex items-center justify-center self-start rounded-full bg-[#46b96c] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(70,185,108,0.24)] transition hover:bg-[#38c567] sm:mt-6"
+          >
+            New Item
+          </button>
         </div>
 
         {isLoading ? (
@@ -384,6 +479,118 @@ export default function InventoryPage() {
                       className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {isCreateModalOpen && isMounted
+        ? createPortal(
+            <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[rgba(34,48,32,0.35)] p-4">
+              <div className="w-full max-w-md rounded-[28px] border border-[#d9e3d5] bg-white p-6 shadow-[0_22px_60px_rgba(31,37,32,0.20)]">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#667463]">
+                      Add Inventory
+                    </p>
+                    <h3 className="mt-2 text-2xl font-bold text-[#223020]">
+                      New Stock Item
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeCreateModal}
+                    className="rounded-full border border-[#d9e3d5] px-3 py-1 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3]"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="mt-6 space-y-5">
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                      Item Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newItemForm.name}
+                      onChange={(event) =>
+                        setNewItemForm({
+                          ...newItemForm,
+                          name: event.target.value,
+                        })
+                      }
+                      className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                      placeholder="Example: Brown Sugar Syrup"
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                        Cost
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newItemForm.cost}
+                        onChange={(event) =>
+                          setNewItemForm({
+                            ...newItemForm,
+                            cost: event.target.value,
+                          })
+                        }
+                        className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                        Starting Stock
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={newItemForm.inventoryNum}
+                        onChange={(event) =>
+                          setNewItemForm({
+                            ...newItemForm,
+                            inventoryNum: event.target.value,
+                          })
+                        }
+                        className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                      />
+                    </div>
+                  </div>
+
+                  {createError ? (
+                    <div className="rounded-[18px] border border-[#e0b1aa] bg-[#fff2f0] px-4 py-3 text-sm text-[#91463d]">
+                      {createError}
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={closeCreateModal}
+                      disabled={isCreating}
+                      className="rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreate}
+                      disabled={isCreating}
+                      className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isCreating ? 'Adding...' : 'Add Item'}
                     </button>
                   </div>
                 </div>

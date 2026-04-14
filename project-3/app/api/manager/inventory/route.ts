@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { getInventoryItems, updateInventoryItem } from '@/lib/inventory';
+import {
+  createInventoryItem,
+  getInventoryItems,
+  updateInventoryItem,
+} from '@/lib/inventory';
 
 export async function GET() {
   try {
@@ -10,6 +14,51 @@ export async function GET() {
     console.error('Database connection error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch inventory data.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const name = String(body.name ?? '').trim();
+    const cost = Number(body.cost);
+    const inventoryNum = Number(body.inventoryNum);
+
+    if (!name) {
+      return NextResponse.json(
+        { error: 'Item name is required.' },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(cost) || !Number.isFinite(inventoryNum)) {
+      return NextResponse.json(
+        { error: 'Cost and stock are required.' },
+        { status: 400 }
+      );
+    }
+
+    if (cost < 0 || inventoryNum < 0) {
+      return NextResponse.json(
+        { error: 'Cost and stock must be zero or greater.' },
+        { status: 400 }
+      );
+    }
+
+    const createdItem = await createInventoryItem(
+      name,
+      cost,
+      Math.floor(inventoryNum),
+      0
+    );
+
+    return NextResponse.json(createdItem, { status: 201 });
+  } catch (error) {
+    console.error('Inventory create error:', error);
+    return NextResponse.json(
+      { error: 'Failed to create inventory item.' },
       { status: 500 }
     );
   }
