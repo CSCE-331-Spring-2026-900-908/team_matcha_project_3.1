@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import MenuGrid from '@/components/MenuGrid';
+import MenuGrid2 from '@/components/MenuGrid2';
 import CartSidebar from '@/components/CartSidebar';
 import CustomizationModal from '@/components/CustomizationModal';
 import {
@@ -253,7 +253,7 @@ export default function EmployeePOSPage() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-6">
-          <MenuGrid
+          <MenuGrid2
             items={filteredItems}
             error={error}
             onSelectItem={(item) => setModalState({ mode: 'add', item })}

@@ -27,7 +27,7 @@ export async function createOrder(
     cost: number;
     iceLevel?: string;
     sugarLevel?: string;
-    topping?: string;
+    toppings?: string[];
   }[]
 ) {
   const connection = await pool.connect();
@@ -53,7 +53,7 @@ export async function createOrder(
           item.cost,
           item.iceLevel || 'Regular Ice',
           item.sugarLevel || '100%',
-          item.topping || 'None',
+          item.toppings?.join(', ') || 'None',
         ]
       );
     }
