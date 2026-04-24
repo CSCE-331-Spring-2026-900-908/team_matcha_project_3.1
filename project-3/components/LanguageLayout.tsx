@@ -21,8 +21,11 @@ export default function LanguageLayout({
     }
   }, [langContext.accessibilityMode]);
 
+  // Use a stable class name for the initial server render
+  const accessibilityClass = mounted && langContext.accessibilityMode ? 'accessibility-mode' : '';
+
   return (
-    <div className={langContext.accessibilityMode ? 'accessibility-mode' : ''}>
+    <div className={accessibilityClass}>
       {mounted && (
         <a
           href="#main-content"
