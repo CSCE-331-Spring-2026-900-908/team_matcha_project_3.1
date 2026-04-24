@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { authFetch } from '@/lib/fetch-utils';
 
 type InventoryItem = {
   inventoryId: number;

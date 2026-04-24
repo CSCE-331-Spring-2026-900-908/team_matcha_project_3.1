@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { withAuth } from '@/lib/middleware-utils';
 
 type SummaryRow = {
   total_orders: string;
@@ -46,142 +47,144 @@ function getDefaultDateRange() {
   return { start, end };
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const defaultRange = getDefaultDateRange();
+export async function GET(req: NextRequest) {
+  return withAuth(req, ['manager'], async (request) => {
+    const { searchParams } = new URL(request.url);
+    const defaultRange = getDefaultDateRange();
 
-  const startDate = searchParams.get('startDate') ?? defaultRange.start;
-  const endDate = searchParams.get('endDate') ?? defaultRange.end;
+    const startDate = searchParams.get('startDate') ?? defaultRange.start;
+    const endDate = searchParams.get('endDate') ?? defaultRange.end;
 
-  if (!isIsoDate(startDate) || !isIsoDate(endDate)) {
-    return NextResponse.json(
-      { error: 'Invalid date format. Use YYYY-MM-DD.' },
-      { status: 400 }
-    );
-  }
+    if (!isIsoDate(startDate) || !isIsoDate(endDate)) {
+      return NextResponse.json(
+        { error: 'Invalid date format. Use YYYY-MM-DD.' },
+        { status: 400 }
+      );
+    }
 
-  if (startDate > endDate) {
-    return NextResponse.json(
-      { error: 'Start date must be before or equal to end date.' },
-      { status: 400 }
-    );
-  }
+    if (startDate > endDate) {
+      return NextResponse.json(
+        { error: 'Start date must be before or equal to end date.' },
+        { status: 400 }
+      );
+    }
 
-  const client = await pool.connect();
+    const client = await pool.connect();
 
-  try {
-    const [summaryResult, dailyTrendResult, topSellersResult, hourlyTrendResult, distributionResult] =
-      await Promise.all([
-        client.query<SummaryRow>(
-          `SELECT
-            COUNT(*)::int AS total_orders,
-            COALESCE(SUM(costtotal), 0)::numeric AS total_revenue,
-            COALESCE(AVG(costtotal), 0)::numeric AS average_order_value,
-            0::int AS pending_orders
-          FROM orders
-          WHERE orderdatetime >= $1::date
-            AND orderdatetime < ($2::date + INTERVAL '1 day');`,
-          [startDate, endDate]
-        ),
-        client.query<DailyTrendRow>(
-          `SELECT
-            TO_CHAR(DATE(orderdatetime), 'YYYY-MM-DD') AS day,
-            COALESCE(SUM(costtotal), 0)::numeric AS revenue,
-            COUNT(*)::int AS orders
-          FROM orders
-          WHERE orderdatetime >= $1::date
-            AND orderdatetime < ($2::date + INTERVAL '1 day')
-          GROUP BY DATE(orderdatetime)
-          ORDER BY DATE(orderdatetime) ASC;`,
-          [startDate, endDate]
-        ),
-        client.query<TopSellerRow>(
-          `SELECT
-            oi.menuid,
-            m.name,
-            COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
-            COALESCE(SUM(COALESCE(oi.cost, m.cost) * oi.quantity), 0)::numeric AS sales_amount
-          FROM order_items oi
-          JOIN orders o ON o.orderid = oi.orderid
-          JOIN menu m ON m.menuid = oi.menuid
-          WHERE o.orderdatetime >= $1::date
-            AND o.orderdatetime < ($2::date + INTERVAL '1 day')
-          GROUP BY oi.menuid, m.name
-          ORDER BY units_sold DESC, sales_amount DESC
-          LIMIT 5;`,
-          [startDate, endDate]
-        ),
-        client.query<HourlyTrendRow>(
-          `SELECT
-            EXTRACT(HOUR FROM orderdatetime)::int AS hour_of_day,
-            COUNT(*)::int AS orders
-          FROM orders
-          WHERE orderdatetime >= $1::date
-            AND orderdatetime < ($2::date + INTERVAL '1 day')
-          GROUP BY EXTRACT(HOUR FROM orderdatetime)
-          ORDER BY hour_of_day ASC;`,
-          [startDate, endDate]
-        ),
-        client.query<PriceDistributionRow>(
-          `SELECT
-            CASE
-              WHEN cost < 5 THEN 'Under $5'
-              WHEN cost >= 5 AND cost < 7 THEN '$5 - $6.99'
-              ELSE '$7 and above'
-            END AS bucket,
-            COUNT(*)::int AS item_count
-          FROM menu
-          GROUP BY 1
-          ORDER BY 1 ASC;`
-        ),
-      ]);
+    try {
+      const [summaryResult, dailyTrendResult, topSellersResult, hourlyTrendResult, distributionResult] =
+        await Promise.all([
+          client.query<SummaryRow>(
+            `SELECT
+              COUNT(*)::int AS total_orders,
+              COALESCE(SUM(costtotal), 0)::numeric AS total_revenue,
+              COALESCE(AVG(costtotal), 0)::numeric AS average_order_value,
+              0::int AS pending_orders
+            FROM orders
+            WHERE orderdatetime >= $1::date
+              AND orderdatetime < ($2::date + INTERVAL '1 day');`,
+            [startDate, endDate]
+          ),
+          client.query<DailyTrendRow>(
+            `SELECT
+              TO_CHAR(DATE(orderdatetime), 'YYYY-MM-DD') AS day,
+              COALESCE(SUM(costtotal), 0)::numeric AS revenue,
+              COUNT(*)::int AS orders
+            FROM orders
+            WHERE orderdatetime >= $1::date
+              AND orderdatetime < ($2::date + INTERVAL '1 day')
+            GROUP BY DATE(orderdatetime)
+            ORDER BY DATE(orderdatetime) ASC;`,
+            [startDate, endDate]
+          ),
+          client.query<TopSellerRow>(
+            `SELECT
+              oi.menuid,
+              m.name,
+              COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
+              COALESCE(SUM(COALESCE(oi.cost, m.cost) * oi.quantity), 0)::numeric AS sales_amount
+            FROM order_items oi
+            JOIN orders o ON o.orderid = oi.orderid
+            JOIN menu m ON m.menuid = oi.menuid
+            WHERE o.orderdatetime >= $1::date
+              AND o.orderdatetime < ($2::date + INTERVAL '1 day')
+            GROUP BY oi.menuid, m.name
+            ORDER BY units_sold DESC, sales_amount DESC
+            LIMIT 5;`,
+            [startDate, endDate]
+          ),
+          client.query<HourlyTrendRow>(
+            `SELECT
+              EXTRACT(HOUR FROM orderdatetime)::int AS hour_of_day,
+              COUNT(*)::int AS orders
+            FROM orders
+            WHERE orderdatetime >= $1::date
+              AND orderdatetime < ($2::date + INTERVAL '1 day')
+            GROUP BY EXTRACT(HOUR FROM orderdatetime)
+            ORDER BY hour_of_day ASC;`,
+            [startDate, endDate]
+          ),
+          client.query<PriceDistributionRow>(
+            `SELECT
+              CASE
+                WHEN cost < 5 THEN 'Under $5'
+                WHEN cost >= 5 AND cost < 7 THEN '$5 - $6.99'
+                ELSE '$7 and above'
+              END AS bucket,
+              COUNT(*)::int AS item_count
+            FROM menu
+            GROUP BY 1
+            ORDER BY 1 ASC;`
+          ),
+        ]);
 
-    const summary = summaryResult.rows[0] ?? {
-      total_orders: '0',
-      total_revenue: '0',
-      average_order_value: '0',
-      pending_orders: '0',
-    };
+      const summary = summaryResult.rows[0] ?? {
+        total_orders: '0',
+        total_revenue: '0',
+        average_order_value: '0',
+        pending_orders: '0',
+      };
 
-    return NextResponse.json({
-      summary: {
-        totalOrders: Number(summary.total_orders),
-        totalRevenue: Number(summary.total_revenue),
-        averageOrderValue: Number(summary.average_order_value),
-        pendingOrders: Number(summary.pending_orders),
-      },
-      dailyTrend: dailyTrendResult.rows.map((row) => ({
-        day: row.day,
-        revenue: Number(row.revenue),
-        orders: Number(row.orders),
-      })),
-      topSellers: topSellersResult.rows.map((row) => ({
-        menuid: row.menuid,
-        name: row.name,
-        unitsSold: Number(row.units_sold),
-        salesAmount: Number(row.sales_amount),
-      })),
-      hourlyTrend: hourlyTrendResult.rows.map((row) => ({
-        hourOfDay: Number(row.hour_of_day),
-        orders: Number(row.orders),
-      })),
-      priceDistribution: distributionResult.rows.map((row) => ({
-        label: row.bucket,
-        count: Number(row.item_count),
-      })),
-      period: {
-        startDate,
-        endDate,
-      },
-      generatedAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('Failed to build manager analytics:', error);
-    return NextResponse.json(
-      { error: 'Failed to load manager analytics' },
-      { status: 500 }
-    );
-  } finally {
-    client.release();
-  }
+      return NextResponse.json({
+        summary: {
+          totalOrders: Number(summary.total_orders),
+          totalRevenue: Number(summary.total_revenue),
+          averageOrderValue: Number(summary.average_order_value),
+          pendingOrders: Number(summary.pending_orders),
+        },
+        dailyTrend: dailyTrendResult.rows.map((row) => ({
+          day: row.day,
+          revenue: Number(row.revenue),
+          orders: Number(row.orders),
+        })),
+        topSellers: topSellersResult.rows.map((row) => ({
+          menuid: row.menuid,
+          name: row.name,
+          unitsSold: Number(row.units_sold),
+          salesAmount: Number(row.sales_amount),
+        })),
+        hourlyTrend: hourlyTrendResult.rows.map((row) => ({
+          hourOfDay: Number(row.hour_of_day),
+          orders: Number(row.orders),
+        })),
+        priceDistribution: distributionResult.rows.map((row) => ({
+          label: row.bucket,
+          count: Number(row.item_count),
+        })),
+        period: {
+          startDate,
+          endDate,
+        },
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Failed to build manager analytics:', error);
+      return NextResponse.json(
+        { error: 'Failed to load manager analytics' },
+        { status: 500 }
+      );
+    } finally {
+      client.release();
+    }
+  });
 }

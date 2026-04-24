@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import MenuGrid2 from '@/components/MenuGrid2';
 import CartSidebar from '@/components/CartSidebar';
 import CustomizationModal from '@/components/CustomizationModal';
+import AuthGuard from '@/components/AuthGuard';
+import { authFetch } from '@/lib/fetch-utils';
+import { useRouter } from 'next/navigation';
 import {
   categorizeItem,
   type MenuItem,
@@ -25,13 +28,19 @@ const hasSameCustomization = (first: CartItem, second: CartItem) =>
   first.sugarLevel === second.sugarLevel &&
   first.topping === second.topping;
 
-export default function EmployeePOSPage() {
+/**
+ * Sub-component that handles POS logic. 
+ * Only rendered once AuthGuard confirms the user is authenticated.
+ */
+function EmployeePOSContent() {
+  const router = useRouter();
   const [items, setItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [modalState, setModalState] = useState<ModalState | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
@@ -42,36 +51,37 @@ export default function EmployeePOSPage() {
   const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
 
   useEffect(() => {
-    async function loadMenu() {
+    // Capture user role for conditional UI
+    setUserRole(localStorage.getItem('user_role'));
+
+    async function loadData() {
       try {
-        const response = await fetch('/api/menu');
-        if (!response.ok) throw new Error('Failed to load menu items.');
-        const data: MenuItem[] = await response.json();
-        setItems(data);
+        // 1. Fetch Menu (Public)
+        const menuRes = await fetch('/api/menu');
+        if (!menuRes.ok) throw new Error('Failed to load menu items.');
+        const menuData = await menuRes.json();
+        setItems(menuData);
+
+        // 2. Fetch Employees (Requires Auth)
+        const empRes = await authFetch('/api/employees');
+        if (empRes.status === 401) {
+          router.push('/login');
+          return;
+        }
+        if (!empRes.ok) {
+          const errData = await empRes.json().catch(() => ({}));
+          throw new Error(errData.error || `Error ${empRes.status}: Failed to load employees.`);
+        }
+        const empData = await empRes.json();
+        setEmployees(empData);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load menu items.'
-        );
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
         setIsLoading(false);
       }
     }
-    loadMenu();
-  }, []);
-
-  useEffect(() => {
-    async function loadEmployees() {
-      try {
-        const response = await fetch('/api/employees');
-        if (!response.ok) throw new Error('Failed to load employees.');
-        const data: Employee[] = await response.json();
-        setEmployees(data);
-      } catch {
-        console.error('Failed to load employees');
-      }
-    }
-    loadEmployees();
-  }, []);
+    loadData();
+  }, [router]);
 
   const categories = useMemo(() => {
     const cats = new Set(items.map((item) => categorizeItem(item.name)));
@@ -171,7 +181,7 @@ export default function EmployeePOSPage() {
     }
     setIsPlacingOrder(true);
     try {
-      const response = await fetch('/api/orders', {
+      const response = await authFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -200,12 +210,44 @@ export default function EmployeePOSPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_name');
+    router.push('/login');
+  };
+
   if (isLoading)
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fdfaf6] text-[#6f5848]">
-        Preparing Menu...
+        Preparing POS...
       </div>
     );
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#fdfaf6] p-4 text-center">
+        <div className="rounded-2xl bg-white p-8 shadow-xl border border-red-100 max-w-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Connection Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex gap-4 justify-center">
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-[#2f7a5f] text-white rounded-full font-semibold shadow-md hover:bg-[#256650] transition-colors"
+            >
+              Retry
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="flex h-screen flex-col bg-[#fdfaf6] text-[#2f241d] lg:flex-row">
@@ -218,6 +260,14 @@ export default function EmployeePOSPage() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              {userRole === 'manager' && (
+                <button
+                  onClick={() => router.push('/manager')}
+                  className="rounded-xl border border-[#2f7a5f] text-[#2f7a5f] px-4 py-2 text-sm font-semibold hover:bg-[#2f7a5f] hover:text-white transition-all shadow-sm"
+                >
+                  Manager View
+                </button>
+              )}
               <select
                 value={selectedEmployeeId ?? ''}
                 onChange={(e) =>
@@ -232,6 +282,12 @@ export default function EmployeePOSPage() {
                   </option>
                 ))}
               </select>
+              <button
+                onClick={handleLogout}
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+              >
+                Logout
+              </button>
             </div>
           </div>
 
@@ -323,5 +379,13 @@ export default function EmployeePOSPage() {
         />
       )}
     </main>
+  );
+}
+
+export default function EmployeePOSPage() {
+  return (
+    <AuthGuard allowedRoles={['employee', 'manager']}>
+      <EmployeePOSContent />
+    </AuthGuard>
   );
 }

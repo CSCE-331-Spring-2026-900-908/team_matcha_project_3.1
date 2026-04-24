@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { authFetch } from '@/lib/fetch-utils';
 
 type ManagerAnalytics = {
   summary: {
@@ -98,7 +99,7 @@ export default function AnalyticsPage() {
           startDate: appliedStartDate,
           endDate: appliedEndDate,
         });
-        const response = await fetch(`/api/manager/analytics?${params.toString()}`);
+        const response = await authFetch(`/api/manager/analytics?${params.toString()}`);
 
         if (!response.ok) {
           throw new Error('Failed to load manager analytics.');

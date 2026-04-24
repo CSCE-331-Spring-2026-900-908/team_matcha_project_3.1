@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { authFetch } from '@/lib/fetch-utils';
 
 type ReportPayload = {
   type: 'x' | 'z';
@@ -48,7 +49,7 @@ export default function ReportsPage() {
 
     try {
       const params = new URLSearchParams({ type: 'x', date: targetDate });
-      const response = await fetch(`/api/manager/reports?${params.toString()}`);
+      const response = await authFetch(`/api/manager/reports?${params.toString()}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -82,7 +83,7 @@ export default function ReportsPage() {
     setNotice(null);
 
     try {
-      const response = await fetch('/api/manager/reports', {
+      const response = await authFetch('/api/manager/reports', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

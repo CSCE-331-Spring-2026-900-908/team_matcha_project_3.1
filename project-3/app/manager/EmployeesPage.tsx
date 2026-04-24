@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { authFetch } from '@/lib/fetch-utils';
 
 type Employee = {
   employeeid: number;
@@ -41,7 +42,7 @@ export default function EmployeesPage() {
 
     async function loadEmployees() {
       try {
-        const response = await fetch('/api/employees');
+        const response = await authFetch('/api/employees');
 
         if (!response.ok) {
           throw new Error('Failed to load employees.');
@@ -123,7 +124,7 @@ export default function EmployeesPage() {
     setNotice(null);
 
     try {
-      const response = await fetch('/api/employees', {
+      const response = await authFetch('/api/employees', {
         method: editingEmployee ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +183,7 @@ export default function EmployeesPage() {
     setNotice(null);
 
     try {
-      const response = await fetch('/api/employees', {
+      const response = await authFetch('/api/employees', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

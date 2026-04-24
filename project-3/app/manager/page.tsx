@@ -1,5 +1,10 @@
 import ManagerWorkspace from '@/app/manager/ManagerWorkspace';
+import AuthGuard from '@/components/AuthGuard';
 
 export default function ManagerPage() {
-  return <ManagerWorkspace />;
+  return (
+    <AuthGuard allowedRoles={['manager']}>
+      <ManagerWorkspace />
+    </AuthGuard>
+  );
 }
