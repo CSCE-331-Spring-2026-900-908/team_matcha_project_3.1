@@ -94,6 +94,13 @@ const translations: Translations = {
     "Guava Green Tea": "Guava Green Tea",
     "Caramel Milk Tea": "Caramel Milk Tea",
     "Accessibility Mode": "Accessibility Mode",
+    "Local Weather Forecast": "Local Weather Forecast",
+    "College Station, TX": "College Station, TX",
+    "Loading weather...": "Loading weather...",
+    "Failed to load weather.": "Failed to load weather.",
+    "Current conditions": "Current conditions",
+    "Weather unavailable": "Weather unavailable",
+    "Wind": "Wind",
   },
   es: {
     "Kiosk Ordering": "Pedido en Kiosko",
@@ -178,6 +185,13 @@ const translations: Translations = {
     "Guava Green Tea": "Té Verde de Guayaba",
     "Caramel Milk Tea": "Té de Leche de Caramelo",
     "Accessibility Mode": "Modo de Accesibilidad",
+    "Local Weather Forecast": "Pronóstico del Tiempo Local",
+    "College Station, TX": "College Station, TX",
+    "Loading weather...": "Cargando clima...",
+    "Failed to load weather.": "Error al cargar el clima.",
+    "Current conditions": "Condiciones actuales",
+    "Weather unavailable": "Clima no disponible",
+    "Wind": "Viento",
   },
 };
 
