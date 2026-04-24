@@ -24,3 +24,113 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Accessibility Utilities */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.not-sr-only {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ============================================================
+   ACCESSIBILITY MODE (Zoom & High Contrast)
+   ============================================================ */
+
+html.accessibility-mode {
+  font-size: 20px !important; /* Significant zoom but not overwhelming */
+}
+
+/* Maintain high contrast using the Matcha palette */
+html.accessibility-mode body {
+  background-color: #eef1ec !important; /* Matcha Fog */
+  color: #1f2520 !important; /* Matcha Dark */
+}
+
+/* Boost font sizes while maintaining hierarchy */
+html.accessibility-mode h1 { font-size: 3.5rem !important; }
+html.accessibility-mode h2 { font-size: 2.75rem !important; }
+html.accessibility-mode h3 { font-size: 2.25rem !important; }
+html.accessibility-mode h4 { font-size: 1.75rem !important; }
+
+/* Global text overrides for readability */
+html.accessibility-mode p,
+html.accessibility-mode span,
+html.accessibility-mode li,
+html.accessibility-mode b,
+html.accessibility-mode strong {
+  color: #1f2520 !important; /* Force darker text */
+  line-height: 1.5 !important;
+}
+
+/* Restore Rounded Corners from DESIGN.md - Escaping Tailwind brackets for raw CSS */
+html.accessibility-mode .rounded-\[32px\],
+html.accessibility-mode .rounded-\[28px\],
+html.accessibility-mode .rounded-t-\[32px\] { border-radius: 28px !important; }
+
+html.accessibility-mode .rounded-\[24px\],
+html.accessibility-mode .rounded-2xl { border-radius: 24px !important; }
+
+html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
+
+/* High Contrast Interactive Elements using Matcha Colors */
+html.accessibility-mode button, 
+html.accessibility-mode a {
+  border-width: 3px !important;
+  border-color: #1f2520 !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease;
+}
+
+/* Accessibility Mode Focus State */
+html.accessibility-mode :focus {
+  outline: 6px solid #2f7a5f !important;
+  outline-offset: 4px !important;
+}
+
+/* Ensure backgrounds stay light for contrast */
+html.accessibility-mode .bg-white,
+html.accessibility-mode .bg-\[\#f8faf7\],
+html.accessibility-mode .bg-\[\#fdfaf6\] {
+  background-color: #ffffff !important;
+}
+
+html.accessibility-mode .bg-\[\#f8f1e7\],
+html.accessibility-mode .bg-\[\#f0e6d8\] {
+  background-color: #eef1ec !important;
+}
+
+/* Accessibility button style */
+html.accessibility-mode .fixed button {
+  border-width: 2px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
