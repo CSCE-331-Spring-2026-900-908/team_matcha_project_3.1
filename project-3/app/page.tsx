@@ -1,6 +1,10 @@
+'use client';
+
 import Link from "next/link";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function Home() {
+  const { t } = useLanguage();
   const portalLinks = [
     {
       href: "/menu",
@@ -23,28 +27,30 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#eef1ec] px-6 py-10 text-[#1f2520]">
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-4xl flex-col justify-center rounded-[28px] border border-[#c8d1c4] bg-[#f8faf7] p-8 shadow-[0_18px_48px_rgba(31,37,32,0.08)] sm:p-12">
-        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#5d6b5e]">
-          Team Matcha POS
-        </p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
-          Portal
-        </h1>
+        <header>
+          <p className="text-base font-semibold uppercase tracking-[0.22em] text-[#4a554a]">
+            {t("Team Matcha POS")}
+          </p>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl text-[#1f2520]">
+            {t("Portal")}
+          </h1>
+        </header>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <nav className="mt-10 grid gap-6 md:grid-cols-3">
           {portalLinks.map((portalLink) => (
             <Link
               key={portalLink.href}
               href={portalLink.href}
-              className={`flex min-h-40 items-center justify-center rounded-[24px] border border-[#b9c5b6] bg-white px-6 py-6 text-center shadow-[0_8px_24px_rgba(31,37,32,0.06)] transition hover:border-[#829080] hover:bg-[#f4f7f3] focus:outline-none focus:ring-4 focus:ring-[#d7e2d4] ${
+              className={`flex min-h-[160px] items-center justify-center rounded-[24px] border border-[#b9c5b6] bg-white px-6 py-6 text-center shadow-[0_8px_24px_rgba(31,37,32,0.06)] transition hover:border-[#829080] hover:bg-[#f4f7f3] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
                 portalLink.label === "Kiosk" ? "md:col-start-2" : ""
               }`}
             >
               <h2 className="text-3xl font-bold text-[#1f2520]">
-                {portalLink.label}
+                {t(portalLink.label)}
               </h2>
             </Link>
           ))}
-        </div>
+        </nav>
       </section>
     </main>
   );

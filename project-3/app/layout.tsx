@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { LanguageProvider } from "@/lib/LanguageContext";
+import LanguageLayout from "@/components/LanguageLayout";
 
 export const metadata: Metadata = {
   title: "Team Matcha Portal",
@@ -13,7 +15,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col relative">
+        <LanguageProvider>
+          <LanguageLayout>
+            {children}
+          </LanguageLayout>
+        </LanguageProvider>
+      </body>
     </html>
   );
 }
