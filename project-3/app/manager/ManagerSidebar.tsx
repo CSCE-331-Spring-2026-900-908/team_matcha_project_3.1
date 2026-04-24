@@ -44,7 +44,7 @@ export default function ManagerSidebar({
   onSelect,
 }: ManagerSidebarProps) {
   return (
-    <aside className="rounded-[28px] border border-[#cfd9ca] bg-[#f7faf5] p-5">
+    <aside className="manager-sidebar rounded-[28px] border border-[#cfd9ca] bg-[#f7faf5] p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#667463]">
         Manager Tools
       </p>
@@ -66,10 +66,10 @@ export default function ManagerSidebar({
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[#748272]">
                 {tool.eyebrow}
               </p>
-              <h2 className="mt-2 text-lg font-bold text-[#243022]">
+              <h2 className="mt-2 text-lg font-bold leading-tight text-[#243022] break-words">
                 {tool.title}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-[#556253]">
+              <p className="mt-2 text-sm leading-6 text-[#556253] break-words">
                 {tool.description}
               </p>
             </button>

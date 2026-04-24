@@ -134,3 +134,15 @@ html.accessibility-mode .fixed button {
   border-width: 2px !important;
   box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
 }
+
+/* Keep manager tool text inside card boundaries in accessibility mode */
+html.accessibility-mode .manager-sidebar h2,
+html.accessibility-mode .manager-sidebar p {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+html.accessibility-mode .manager-sidebar h2 {
+  font-size: 1.5rem !important;
+  line-height: 1.2 !important;
+}

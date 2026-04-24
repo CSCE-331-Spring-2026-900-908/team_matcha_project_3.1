@@ -37,14 +37,13 @@ const LanguageToggle = () => {
       
       <button
         onClick={() => setAccessibilityMode(!accessibilityMode)}
-        className={`flex items-center gap-2 px-6 py-4 rounded-[20px] shadow-lg border transition-all duration-200 font-bold focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
+        className={`flex items-center justify-center px-6 py-4 rounded-[20px] shadow-lg border transition-all duration-200 font-bold text-center leading-tight whitespace-normal focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
           accessibilityMode 
             ? 'bg-[#2f7a5f] text-white border-[#1f2520]' 
             : 'bg-white text-[#1f2520] border-[#c8d1c4] hover:bg-[#f8f1e7]'
         }`}
         aria-pressed={accessibilityMode}
       >
-        <span className="text-xl" aria-hidden="true">👁️</span>
         {t('Accessibility Mode')}
       </button>
     </div>
