@@ -1,14 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdfaf6;
+  --foreground: #1f2520;
+  --matcha-ink: #1f2520;
+  --matcha-deep: #2f7a5f;
+  --matcha-moss: #6d8a6f;
+  --matcha-fog: #eef1ec;
+  --matcha-cream: #f8f1e7;
+  --matcha-card: #fffdf9;
+  --matcha-line: #eadfce;
+  --matcha-gold: #d9b16f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-sans: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
   --font-mono: "SFMono-Regular", Consolas, monospace;
 }
 
@@ -25,6 +34,31 @@ body {
   font-family: var(--font-sans);
 }
 
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+}
+
+.matcha-surface {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.72), transparent 32%),
+    linear-gradient(155deg, #f7efe1 0%, #fffaf3 38%, #e7f2ea 100%);
+}
+
+.matcha-panel {
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.96), rgba(248, 250, 247, 0.96));
+  box-shadow: 0 24px 80px rgba(79, 55, 33, 0.14);
+}
+
+.matcha-grid {
+  background-image:
+    linear-gradient(rgba(47, 122, 95, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 122, 95, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(100%);
@@ -36,6 +70,129 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(1.1);
+  }
+}
+
+@keyframes brew-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes brew-fill {
+  0% {
+    height: 0%;
+  }
+  100% {
+    height: 100%;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cart-bump {
+  0%, 100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.14);
+  }
+  60% {
+    transform: scale(0.96);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-steam-rise {
+  animation: steam-rise 1.8s ease-in-out infinite;
+}
+
+.animate-brew-pulse {
+  animation: brew-pulse 1.6s ease-in-out infinite;
+}
+
+.animate-brew-fill {
+  animation: brew-fill 2.2s ease-in-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.35s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.25s ease-out both;
+}
+
+.animate-cart-bump {
+  animation: cart-bump 0.45s ease-out both;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(220, 229, 216, 0.55) 0%,
+    rgba(255, 255, 255, 0.92) 50%,
+    rgba(220, 229, 216, 0.55) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
 }
 
 /* Accessibility Utilities */

@@ -8,6 +8,8 @@ import CustomizationModal from '@/components/CustomizationModal';
 import {
   categorizeItem,
   currencyFormatter,
+  getCategoryIcon,
+  getItemBadge,
   type MenuItem,
   type CartItem,
 } from '@/components/pos-types';
@@ -18,11 +20,106 @@ type ModalState =
   | { mode: 'add'; item: MenuItem }
   | { mode: 'edit'; item: CartItem; index: number };
 
+type WeatherApiResponse = {
+  location?: {
+    label?: string;
+  };
+  current: {
+    temperatureF: number | null;
+    windMph: number | null;
+    weatherCode: number | null;
+    condition: string;
+  };
+};
+
 const hasSameCustomization = (first: CartItem, second: CartItem) =>
   first.menuid === second.menuid &&
   first.iceLevel === second.iceLevel &&
   first.sugarLevel === second.sugarLevel &&
   first.topping === second.topping;
+
+function CategoryIcon({ iconName }: { iconName: string }) {
+  switch (iconName) {
+    case 'Leaf':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M5 21c8 0 14-6 14-14C11 7 5 13 5 21Z" />
+          <path d="M9 15c2 0 4-2 6-6" />
+        </svg>
+      );
+    case 'Cloud':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 18h11a4 4 0 1 0-.7-7.94A5 5 0 0 0 6.4 8.6 3.5 3.5 0 0 0 6 18Z" />
+        </svg>
+      );
+    case 'Sparkle':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" />
+        </svg>
+      );
+    case 'Star':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.2 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+        </svg>
+      );
+    default:
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M4 7h16M4 12h16M4 17h10" />
+        </svg>
+      );
+  }
+}
+
+function pickWeatherRecommendedItem(items: MenuItem[], weather: WeatherApiResponse | null) {
+  if (items.length === 0) return null;
+
+  const currentTemp = weather?.current.temperatureF;
+  const condition = weather?.current.condition.toLowerCase() ?? '';
+
+  const findByKeywords = (keywords: string[]) =>
+    items.find((item) => keywords.some((keyword) => item.name.toLowerCase().includes(keyword)));
+
+  if (condition.includes('rain') || condition.includes('drizzle') || condition.includes('thunderstorm')) {
+    return findByKeywords(['latte', 'milk', 'matcha']) ?? items[0];
+  }
+
+  if (condition.includes('snow') || condition.includes('fog')) {
+    return findByKeywords(['latte', 'milk', 'tea']) ?? items[0];
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp >= 82) {
+    return findByKeywords(['fruit', 'mango', 'strawberry', 'tea']) ?? items[0];
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp <= 55) {
+    return findByKeywords(['matcha', 'latte', 'milk']) ?? items[0];
+  }
+
+  return findByKeywords(['matcha', 'tea', 'milk']) ?? items[0];
+}
+
+function getWeatherRecommendationCopy(weather: WeatherApiResponse | null) {
+  const currentTemp = weather?.current.temperatureF;
+  const condition = weather?.current.condition.toLowerCase() ?? '';
+
+  if (condition.includes('rain') || condition.includes('thunderstorm')) {
+    return 'Rainy weather calls for something smoother and more comforting.';
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp >= 82) {
+    return 'Warm weather today makes a lighter, more refreshing drink the better pick.';
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp <= 55) {
+    return 'Cooler air outside makes a richer, cozier drink feel like the right move.';
+  }
+
+  return 'Current weather makes this a strong all-around house recommendation.';
+}
 
 export default function KioskPage() {
   const { t } = useLanguage();
@@ -34,6 +131,9 @@ export default function KioskPage() {
   const [modalState, setModalState] = useState<ModalState | null>(null);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [weather, setWeather] = useState<WeatherApiResponse | null>(null);
+  const [isBrewing, setIsBrewing] = useState(false);
+  const [animateCartBadge, setAnimateCartBadge] = useState(false);
 
   useEffect(() => {
     async function loadMenu() {
@@ -43,15 +143,39 @@ export default function KioskPage() {
         const data: MenuItem[] = await response.json();
         setItems(data);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : t('Failed to load menu items.')
-        );
+        setError(err instanceof Error ? err.message : t('Failed to load menu items.'));
       } finally {
         setIsLoading(false);
       }
     }
     loadMenu();
   }, [t]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadWeather() {
+      try {
+        const response = await fetch('/api/weather');
+        if (!response.ok) return;
+
+        const data = (await response.json()) as WeatherApiResponse;
+        if (isMounted) {
+          setWeather(data);
+        }
+      } catch {
+        if (isMounted) {
+          setWeather(null);
+        }
+      }
+    }
+
+    loadWeather();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories = useMemo(() => {
     const cats = new Set(items.map((item) => categorizeItem(item.name)));
@@ -63,26 +187,50 @@ export default function KioskPage() {
     return items.filter((item) => categorizeItem(item.name) === activeCategory);
   }, [items, activeCategory]);
 
+  const featuredItem = useMemo(
+    () => pickWeatherRecommendedItem(items, weather),
+    [items, weather]
+  );
+
+  const seasonalItem = useMemo(
+    () =>
+      items.find((item) => item.name.toLowerCase().includes('brown sugar')) ??
+      items.find((item) => categorizeItem(item.name) === 'Specials') ??
+      items[1] ??
+      items[0] ??
+      null,
+    [items]
+  );
+
   const closeModal = () => setModalState(null);
 
   const addToCart = (customizedItem: CartItem) => {
     setCart((prev) => {
-      const existingIndex = prev.findIndex((item) =>
-        hasSameCustomization(item, customizedItem)
-      );
+      const existingIndex = prev.findIndex((item) => hasSameCustomization(item, customizedItem));
 
       if (existingIndex !== -1) {
         return prev.map((item, index) =>
-          index === existingIndex
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          index === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
 
       return [...prev, { ...customizedItem, quantity: 1 }];
     });
+    setAnimateCartBadge(true);
     closeModal();
   };
+
+  useEffect(() => {
+    if (!animateCartBadge) return;
+
+    const timer = window.setTimeout(() => {
+      setAnimateCartBadge(false);
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [animateCartBadge]);
 
   const saveEditedCartItem = (customizedItem: CartItem) => {
     if (!modalState || modalState.mode !== 'edit') return;
@@ -130,7 +278,7 @@ export default function KioskPage() {
     setCart((prev) => {
       const index = prev.findLastIndex((i) => i.menuid === menuid);
       if (index === -1) return prev;
-      
+
       const item = prev[index];
       if (item.quantity > 1) {
         return prev.map((i, idx) =>
@@ -153,8 +301,8 @@ export default function KioskPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerName: 'Kiosk Customer',
-          costTotal: costTotal,
-          employeeID: 1, // Default kiosk employee
+          costTotal,
+          employeeID: 1,
           items: cart.map((item) => ({
             menuid: item.menuid,
             quantity: item.quantity,
@@ -167,10 +315,12 @@ export default function KioskPage() {
       });
 
       if (!response.ok) throw new Error(t('Failed to place order.'));
-      
-      alert(t('Order Placed Successfully!'));
-      setCart([]);
-      setIsCartOpen(false);
+      setIsBrewing(true);
+      window.setTimeout(() => {
+        setIsBrewing(false);
+        setCart([]);
+        setIsCartOpen(false);
+      }, 2200);
     } catch (err) {
       alert(err instanceof Error ? err.message : t('Failed to place order.'));
     } finally {
@@ -178,21 +328,80 @@ export default function KioskPage() {
     }
   };
 
-  if (isLoading)
+  if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#fdfaf6] text-[#4a554a] text-lg font-medium">
-        {t('Preparing Menu...')}
+      <main className="matcha-surface min-h-screen px-6 py-6 text-[#4a554a]">
+        <div className="mx-auto max-w-[1600px]">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="skeleton-shimmer h-14 w-64 rounded-full" />
+            <div className="skeleton-shimmer hidden h-12 w-40 rounded-full sm:block" />
+          </div>
+          <div className="skeleton-shimmer mb-6 h-14 rounded-[24px]" />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="space-y-6">
+              <div className="rounded-[32px] border border-[#e8e2d7] bg-white/70 p-5">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                    <div className="skeleton-shimmer h-[320px] rounded-[28px]" />
+                    <div className="skeleton-shimmer h-[320px] rounded-[28px]" />
+                  </div>
+                  <div className="grid gap-4">
+                    <div className="skeleton-shimmer h-40 rounded-[28px]" />
+                    <div className="skeleton-shimmer h-40 rounded-[28px]" />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="overflow-hidden rounded-[28px] border border-[#eadfce] bg-white p-0 shadow-sm">
+                    <div className="skeleton-shimmer h-56 w-full" />
+                    <div className="space-y-4 p-6">
+                      <div className="skeleton-shimmer h-5 w-24 rounded-full" />
+                      <div className="skeleton-shimmer h-8 w-2/3 rounded-full" />
+                      <div className="skeleton-shimmer h-4 w-full rounded-full" />
+                      <div className="skeleton-shimmer h-4 w-4/5 rounded-full" />
+                      <div className="flex items-center justify-between pt-4">
+                        <div className="skeleton-shimmer h-12 w-28 rounded-full" />
+                        <div className="skeleton-shimmer h-12 w-36 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="hidden lg:block">
+              <div className="rounded-[32px] border border-[#eadfce] bg-white/80 p-8 shadow-sm">
+                <div className="skeleton-shimmer h-8 w-36 rounded-full" />
+                <div className="mt-6 space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="skeleton-shimmer h-24 rounded-[24px]" />
+                  ))}
+                </div>
+                <div className="mt-6 space-y-3">
+                  <div className="skeleton-shimmer h-5 rounded-full" />
+                  <div className="skeleton-shimmer h-5 rounded-full" />
+                  <div className="skeleton-shimmer h-14 rounded-[24px]" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     );
+  }
 
   const cartTotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0) * 1.0825;
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const weatherSummary =
+    weather && typeof weather.current.temperatureF === 'number'
+      ? `${Math.round(weather.current.temperatureF)}°F • ${weather.current.condition}`
+      : 'Using house recommendation';
 
   return (
-    <main className="flex h-screen flex-col bg-[#fdfaf6] text-[#1f2520] lg:flex-row">
+    <main className="matcha-surface flex h-screen flex-col text-[#1f2520] lg:flex-row">
       <section className="flex flex-1 flex-col overflow-hidden border-r border-[#eadfce]">
-        <header className="border-b border-[#eadfce] bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
+        <header className="border-b border-[#eadfce] bg-white/90 p-6 shadow-sm backdrop-blur">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Link
                 href="/"
@@ -204,45 +413,211 @@ export default function KioskPage() {
                 </svg>
                 {t('Portal')}
               </Link>
-              <h1 className="text-3xl font-extrabold tracking-tight text-[#1f2520] lg:text-4xl">
-                {t('Kiosk Ordering')}
-              </h1>
-            </div>
-            <div className="hidden sm:block">
-              <span className="rounded-full bg-[#f8f1e7] px-6 py-3 text-base font-semibold text-[#4a554a] border border-[#eadfce]">
-                {t('Self Service')}
-              </span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
+                  {t('Self Service')}
+                </p>
+                <h1 className="text-3xl font-extrabold tracking-tight text-[#1f2520] lg:text-4xl">
+                  {t('Kiosk Ordering')}
+                </h1>
+              </div>
             </div>
           </div>
 
-          <nav className="mt-6 flex gap-3 overflow-x-auto pb-4 snap-x" aria-label={t("Menu categories")}>
+          <nav className="mt-6 flex gap-3 overflow-x-auto pb-2" aria-label={t('Menu categories')}>
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`whitespace-nowrap min-h-[56px] snap-start rounded-full px-8 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
+                className={`inline-flex min-h-[56px] items-center gap-3 whitespace-nowrap rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
                   activeCategory === cat
-                    ? 'bg-[#2f7a5f] text-white shadow-md'
-                    : 'bg-[#f0e6d8] text-[#4a554a] hover:bg-[#e6d8c4]'
+                    ? 'bg-[#2f7a5f] text-white shadow-md shadow-[#2f7a5f]/20'
+                    : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#e6d8c4]'
                 }`}
               >
+                <span aria-hidden="true">
+                  <CategoryIcon iconName={getCategoryIcon(cat)} />
+                </span>
                 {t(cat)}
               </button>
             ))}
           </nav>
         </header>
 
-        <div id="main-content" className="flex-1 overflow-y-auto p-6 pb-32 lg:pb-6">
-          <MenuGrid
-            items={filteredItems}
-            error={error}
-            onSelectItem={(item) => setModalState({ mode: 'add', item })}
-            showAddIcon={false}
-          />
+        <div id="main-content" className="flex-1 overflow-y-auto px-6 pb-32 pt-6 lg:pb-6">
+          <div className="matcha-grid mb-6 grid gap-4 rounded-[32px] border border-[#e8e2d7] bg-[linear-gradient(135deg,#fffdf9_0%,#eef1ec_100%)] p-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="rounded-[28px] bg-[#1f2520] px-6 py-6 text-white shadow-[0_18px_44px_rgba(31,37,32,0.18)]">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#dcefe4]">
+                    {t('Weather Pick')}
+                  </span>
+                  {featuredItem && getItemBadge(featuredItem.name) ? (
+                    <span className="rounded-full bg-[#d9b16f] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#1f2520]">
+                      {t(getItemBadge(featuredItem.name) as string)}
+                    </span>
+                  ) : null}
+                </div>
+                <h2 className="mt-4 max-w-xl text-3xl font-bold leading-tight lg:text-4xl">
+                  {featuredItem ? t(featuredItem.name) : t('Fresh whisked matcha, ready in minutes.')}
+                </h2>
+                <p className="mt-3 max-w-2xl text-base leading-7 text-white/82">
+                  {t(getWeatherRecommendationCopy(weather))}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <span className="rounded-full border border-white/18 bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
+                    {t(weatherSummary)}
+                  </span>
+                  {weather?.location?.label ? (
+                    <span className="rounded-full border border-white/18 bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
+                      {weather.location.label}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => featuredItem && setModalState({ mode: 'add', item: featuredItem })}
+                    className="min-h-[56px] rounded-full bg-white px-6 py-3 text-base font-bold text-[#1f2520] transition hover:bg-[#eef1ec] focus:outline-none focus:ring-4 focus:ring-white/60"
+                  >
+                    {t('Customize Recommended Drink')}
+                  </button>
+                  <div className="inline-flex min-h-[56px] items-center rounded-full border border-white/18 px-5 py-3 text-base font-semibold text-white/88">
+                    {featuredItem ? currencyFormatter.format(featuredItem.cost) : t('Cafe favorites')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-[28px] border border-[#d9e4da] bg-white shadow-[0_18px_44px_rgba(47,36,29,0.12)]">
+                <div className="relative h-full min-h-[260px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
+                  {featuredItem?.image_url ? (
+                    <img
+                      src={featuredItem.image_url}
+                      alt={featuredItem.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-8xl opacity-60" aria-hidden="true">
+                      🍵
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(31,37,32,0.82)_100%)] p-5 text-white">
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/72">
+                      {t('Highlighted Drink')}
+                    </p>
+                    <p className="mt-2 text-2xl font-bold">
+                      {featuredItem ? t(featuredItem.name) : t('House Favorite')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="rounded-[28px] border border-[#dce5d8] bg-white p-5 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
+                  {t('Weather Pairing')}
+                </p>
+                <p className="mt-3 text-2xl font-bold text-[#1f2520]">
+                  {weather ? t(weather.current.condition) : t('House guidance')}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[#4a554a]">
+                  {t(getWeatherRecommendationCopy(weather))}
+                </p>
+                {featuredItem ? (
+                  <button
+                    onClick={() => setModalState({ mode: 'add', item: featuredItem })}
+                    className="mt-4 min-h-[48px] rounded-full bg-[#eef1ec] px-5 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
+                  >
+                    {t('Order This Recommendation')}
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Seasonal Spotlight')}</p>
+                <div className="mt-3 grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
+                  <div className="overflow-hidden rounded-[20px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
+                    {seasonalItem?.image_url ? (
+                      <img
+                        src={seasonalItem.image_url}
+                        alt={seasonalItem.name}
+                        className="h-full min-h-[120px] w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex min-h-[120px] items-center justify-center text-5xl opacity-60" aria-hidden="true">
+                        🧋
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#1f2520]">
+                      {seasonalItem ? t(seasonalItem.name) : t('House Favorites')}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-[#4a554a]">
+                      {t('A brighter, limited-time style item to pull attention toward specials and make the kiosk feel alive.')}
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      {seasonalItem ? (
+                        <span className="rounded-full bg-[#eef1ec] px-3 py-1.5 text-sm font-bold text-[#2f7a5f]">
+                          {currencyFormatter.format(seasonalItem.cost)}
+                        </span>
+                      ) : null}
+                      {seasonalItem ? (
+                        <button
+                          onClick={() => setModalState({ mode: 'add', item: seasonalItem })}
+                          className="min-h-[44px] rounded-full bg-[#1f2520] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#313832] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
+                        >
+                          {t('Order Brown Sugar Tea')}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Menu')}</p>
+                  <p className="mt-2 text-3xl font-bold text-[#1f2520]">{items.length}</p>
+                  <p className="mt-1 text-sm text-[#4a554a]">{t('drinks and treats')}</p>
+                </div>
+                <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Browsing')}</p>
+                  <p className="mt-2 text-3xl font-bold text-[#1f2520]">{filteredItems.length}</p>
+                  <p className="mt-1 text-sm text-[#4a554a]">{t(activeCategory)}</p>
+                </div>
+                <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Cart')}</p>
+                  <p className="mt-2 text-3xl font-bold text-[#1f2520]">{cartItemCount}</p>
+                  <p className="mt-1 text-sm text-[#4a554a]">{t('items selected')}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
+                {t('Browse')}
+              </p>
+              <h2 className="mt-2 text-3xl font-bold text-[#1f2520]">{t('Drinks and Treats')}</h2>
+            </div>
+            <p className="text-sm text-[#4a554a]">
+              {filteredItems.length} {t('items in this section')}
+            </p>
+          </div>
+
+          <div key={activeCategory} className="animate-fade-in-up">
+            <MenuGrid
+              items={filteredItems}
+              error={error}
+              onSelectItem={(item) => setModalState({ mode: 'add', item })}
+              showAddIcon={false}
+            />
+          </div>
         </div>
       </section>
 
-      {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <CartSidebar
           cart={cart}
@@ -250,6 +625,7 @@ export default function KioskPage() {
           onRemove={removeFromCart}
           onPlaceOrder={placeOrder}
           isPlacingOrder={isPlacingOrder}
+          animateCountBadge={animateCartBadge}
           onEditItem={(index) => {
             const item = cart[index];
             if (!item) return;
@@ -258,15 +634,15 @@ export default function KioskPage() {
         />
       </div>
 
-      {/* Mobile Sticky Button */}
       {cartItemCount > 0 && !isCartOpen && (
         <div className="fixed bottom-6 left-6 right-6 z-40 lg:hidden">
           <button
             onClick={() => setIsCartOpen(true)}
+            disabled={cartItemCount === 0}
             className="flex w-full items-center justify-between rounded-[24px] bg-[#2f7a5f] p-5 text-white shadow-2xl shadow-[#2f7a5f]/40 transition-transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
           >
             <div className="flex items-center gap-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
+              <span className={`flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-lg font-bold ${animateCartBadge ? 'animate-cart-bump' : ''}`}>
                 {cartItemCount}
               </span>
               <span className="text-xl font-bold">{t('View Order')}</span>
@@ -278,13 +654,13 @@ export default function KioskPage() {
         </div>
       )}
 
-      {/* Mobile Cart Overlay */}
       <CartSidebar
         cart={cart}
         onAdd={addToCart}
         onRemove={removeFromCart}
         onPlaceOrder={placeOrder}
         isPlacingOrder={isPlacingOrder}
+        animateCountBadge={animateCartBadge}
         isMobileOverlay={true}
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -322,6 +698,30 @@ export default function KioskPage() {
           presentation="fullscreen"
         />
       )}
+
+      {isBrewing ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1f2520]/72 p-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[32px] border border-white/12 bg-[linear-gradient(180deg,#fffdf9_0%,#eef1ec_100%)] p-8 text-center shadow-[0_30px_80px_rgba(31,37,32,0.3)]">
+            <div className="relative mx-auto flex h-40 w-40 items-end justify-center">
+              <span className="animate-steam-rise absolute left-9 top-1 text-3xl text-[#6d8a6f]">~</span>
+              <span className="animate-steam-rise absolute right-9 top-3 text-3xl text-[#6d8a6f]" style={{ animationDelay: '0.4s' }}>~</span>
+              <span className="animate-steam-rise absolute top-0 text-4xl text-[#6d8a6f]" style={{ animationDelay: '0.2s' }}>~</span>
+              <div className="relative flex h-32 w-24 items-end justify-center overflow-hidden rounded-[28px] border-4 border-[#2f7a5f] bg-white shadow-xl shadow-[#2f7a5f]/20">
+                <div className="animate-brew-fill absolute inset-x-0 bottom-0 rounded-b-[22px] bg-[linear-gradient(180deg,#c78f54_0%,#8a5730_100%)]" />
+                <div className="animate-brew-pulse relative z-10 mb-5 text-4xl">🍵</div>
+              </div>
+            </div>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">{t('Brewing')}</p>
+            <h2 className="mt-3 text-3xl font-bold text-[#1f2520]">{t('Preparing your order')}</h2>
+            <p className="mt-3 text-base leading-7 text-[#4a554a]">
+              {t('Your drinks are being whisked, shaken, and queued for pickup.')}
+            </p>
+            <div className="mt-6 overflow-hidden rounded-full bg-[#dce5d8]">
+              <div className="animate-brew-fill h-3 rounded-full bg-[linear-gradient(90deg,#6d8a6f_0%,#2f7a5f_100%)]" />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
