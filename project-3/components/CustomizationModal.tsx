@@ -63,9 +63,9 @@ export default function CustomizationModal({
 
   if (presentation === 'fullscreen') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#fdfaf6] text-[#1f2520]">
-        <div className="flex h-full flex-col xl:flex-row">
-          <div className="relative bg-[#f8f1e7] xl:basis-2/5 xl:shrink-0">
+      <div className="fixed inset-0 z-50 matcha-surface animate-fade-in text-[#1f2520]">
+        <div className="flex h-full flex-col animate-fade-in-up xl:flex-row">
+          <div className="relative bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)] xl:basis-2/5 xl:shrink-0">
             <div className="relative h-64 w-full sm:h-72 lg:h-80 xl:h-full">
               {item.image_url ? (
                 <img
@@ -78,6 +78,15 @@ export default function CustomizationModal({
                   🍵
                 </div>
               )}
+            </div>
+            <div className="absolute bottom-6 left-6 right-6 rounded-[28px] bg-white/92 p-5 shadow-xl backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
+                {t('Drink Summary')}
+              </p>
+              <h3 className="mt-2 text-2xl font-bold text-[#1f2520]">{item.name}</h3>
+              <p className="mt-2 text-sm leading-6 text-[#4a554a]">
+                {t('Choose the sweetness, ice, and topping combination that fits the guest and the drink.')}
+              </p>
             </div>
             <button
               onClick={onClose}
@@ -107,10 +116,13 @@ export default function CustomizationModal({
                   <h2 className="mt-4 text-4xl font-bold text-[#1f2520] sm:text-5xl lg:text-6xl">
                     {item.name}
                   </h2>
-                  <div className="flex items-center gap-6 mt-5">
+                  <div className="mt-5 flex flex-wrap items-center gap-4">
                     <p className="text-4xl font-bold text-[#2f7a5f]">
                       {currencyFormatter.format(totalCost)}
                     </p>
+                    <span className="rounded-full border border-[#dce5d8] bg-[#eef1ec] px-5 py-1.5 text-sm font-bold text-[#2f7a5f]">
+                      {t('Made to order')}
+                    </span>
                     {toppingCost > 0 && (
                       <span className="text-sm font-bold text-[#4a554a] bg-[#f8f1e7] px-5 py-1.5 rounded-full border border-[#eadfce]">
                         {t('Includes')} {currencyFormatter.format(toppingCost)} {t('add-on')}
@@ -192,7 +204,15 @@ export default function CustomizationModal({
             </main>
 
             <footer className="border-t border-[#eadfce] bg-white px-8 py-6 shadow-[0_-8px_30px_rgba(47,36,29,0.06)] sm:px-10 lg:px-16">
-              <div className="mx-auto flex w-full max-w-4xl justify-end">
+              <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-6">
+                <div className="hidden sm:block">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
+                    {t('Current total')}
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-[#1f2520]">
+                    {currencyFormatter.format(totalCost)}
+                  </p>
+                </div>
                 <button
                   onClick={handleConfirm}
                   className="shrink-0 min-h-[64px] min-w-[200px] rounded-[24px] bg-[#2f7a5f] px-10 py-5 text-xl font-bold text-white shadow-xl shadow-[#2f7a5f]/20 transition-all hover:bg-[#25634d] active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
@@ -208,8 +228,8 @@ export default function CustomizationModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className="w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true">
+      <div className="w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
         <header className="relative h-56 w-full bg-[#f8f1e7]">
           {item.image_url ? (
             <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
