@@ -35,15 +35,15 @@ export const MENU_EXTRAS: Record<string, { description: string; tag: string | nu
     description: "Roasted, aromatic dark oolong tea perfectly balanced with fresh milk for a deeper flavor.",
     tag: null
   },
-  "Wintermelon Tea": {
+  "Wintermelon Fruit Tea": {
     description: "A light, refreshing, and naturally sweet traditional wintermelon slow-brew.",
     tag: null
   },
-  "Passionfruit Tea": {
-    description: "Zesty and bright passionfruit shaken vigorously with our crisp signature green tea.",
+  "Passionfruit Fruit Tea": {
+    description: "Zesty and bright passionfruit shaken vigorously with our crisp signature fruit tea.",
     tag: "Popular"
   },
-  "Lychee Tea": {
+  "Lychee Fruit Tea": {
     description: "Delicate floral notes of sweet lychee perfectly shaken with fresh iced black tea.",
     tag: null
   },
@@ -67,7 +67,7 @@ export const MENU_EXTRAS: Record<string, { description: string; tag: string | nu
     description: "A comforting classic featuring sweet, hearty red bean puree seamlessly blended into milk tea.",
     tag: "Dessert"
   },
-  "Pineapple Tea": {
+  "Pineapple Fruit Tea": {
     description: "Bright, punchy, and tangy pineapple shaken with our refreshing signature tea blend.",
     tag: null
   },
