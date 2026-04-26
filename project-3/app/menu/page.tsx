@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 
 type MenuItem = {
   menuid: number;
@@ -167,29 +166,68 @@ export default function MenuPage() {
           .join(' • ')
       : toppingError ?? 'Loading toppings...';
 
+  function renderCategory(category: (typeof categoryConfig)[number]) {
+    const categoryItems = groupedItems[category.key];
+
+    return (
+      <section className="grid min-h-0 grid-rows-[auto_1fr] overflow-hidden">
+        <div
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 border-b border-[#454039] pb-1"
+          style={{ color: category.color }}
+        >
+          <h2 className="truncate font-serif text-[1.14rem] font-black uppercase leading-none tracking-normal sm:text-[1.55rem] lg:text-[1.95rem]">
+            {category.title}
+          </h2>
+          <span className="text-[0.62rem] font-black uppercase tracking-[0.08em] text-[#777064] sm:text-[0.78rem]">
+            Price
+          </span>
+        </div>
+
+        <ol className="grid min-h-0 auto-rows-min content-start gap-1.5 overflow-hidden pt-1 sm:gap-2">
+          {categoryItems.map((item, index) => (
+            <li
+              key={item.menuid}
+              className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 sm:gap-2"
+            >
+              <span className="grid size-5 shrink-0 place-items-center rounded-full border border-[#9c968c] font-serif text-[0.58rem] font-bold leading-none text-[#686158] sm:size-6 sm:text-[0.72rem]">
+                {index + 1}
+              </span>
+              <div className="flex min-w-0 items-center gap-1">
+                <span className="min-w-0 truncate text-[0.84rem] font-bold leading-tight text-[#302c27] sm:text-[1.05rem] lg:text-[1.16rem]">
+                  {item.name}
+                </span>
+                <span
+                  className="h-px min-w-3 flex-1 border-t border-dotted"
+                  style={{ borderColor: category.color }}
+                  aria-hidden="true"
+                />
+              </div>
+              <span className="font-serif text-[0.84rem] font-black leading-none text-[#27231f] sm:text-[1rem] lg:text-[1.1rem]">
+                {priceFormatter.format(item.cost)}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
+  }
+
   return (
-    <main className="h-dvh overflow-hidden bg-[#f2efe6] p-2 text-[#28251f] sm:p-3">
+    <main className="h-dvh overflow-hidden bg-[#2f7a5f] p-2 text-[1.05rem] text-[#28251f] sm:p-3 lg:text-[1.12rem]">
       <section
         id="main-content"
         className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden border border-[#d8d1c5] bg-[#fffdf8] shadow-[0_16px_40px_rgba(40,34,25,0.12)]"
       >
-        <header className="flex min-h-0 items-start justify-between gap-3 border-b-2 border-[#37332c] px-3 py-2 sm:px-5">
+        <header className="flex min-h-0 items-start border-b-2 border-[#37332c] px-3 py-2 sm:px-5">
           <div className="min-w-0">
-            <p className="font-serif text-[0.58rem] font-bold uppercase tracking-[0.28em] text-[#6b6458] sm:text-xs">
+            <p className="font-serif text-[0.68rem] font-bold uppercase tracking-[0.28em] text-[#6b6458] sm:text-sm">
               Team Matcha
             </p>
-            <h1 className="truncate font-serif text-[1.85rem] font-black uppercase leading-none tracking-normal text-[#25211d] sm:text-[2.55rem] lg:text-[3.2rem]">
+            <h1 className="truncate font-serif text-[2.05rem] font-black uppercase leading-none tracking-normal text-[#25211d] sm:text-[2.8rem] lg:text-[3.45rem]">
               Bubble Tea Menu
             </h1>
           </div>
 
-          <Link
-            href="/"
-            className="shrink-0 border border-[#37332c] bg-[#fffdf8] px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.08em] text-[#37332c] hover:bg-[#ece7dc] focus:outline-none focus:ring-2 focus:ring-[#3f8a5a] sm:px-3 sm:text-xs"
-            aria-label="Back to Portal"
-          >
-            Portal
-          </Link>
         </header>
 
         <div className="min-h-0 overflow-hidden px-2 py-2 sm:px-3 lg:px-4">
@@ -202,83 +240,38 @@ export default function MenuPage() {
               {menuError}
             </div>
           ) : (
-            <div className="grid h-full min-h-0 grid-cols-1 gap-2 overflow-hidden portrait:grid-cols-[1.35fr_1fr] landscape:grid-cols-3 sm:gap-3 lg:grid-cols-3">
-              {categoryConfig.map((category) => {
-                const categoryItems = groupedItems[category.key];
-
-                return (
-                  <section
-                    key={category.key}
-                    className={`grid min-h-0 grid-rows-[auto_1fr] overflow-hidden ${
-                      category.key === 'greenOolong' ? 'portrait:col-start-2' : ''
-                    } ${category.key === 'milkTeas' ? 'portrait:row-span-2' : ''}`}
-                  >
-                    <div
-                      className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 border-b border-[#454039] pb-1"
-                      style={{ color: category.color }}
-                    >
-                      <h2 className="truncate font-serif text-[1rem] font-black uppercase leading-none tracking-normal sm:text-[1.4rem] lg:text-[1.8rem]">
-                        {category.title}
-                      </h2>
-                      <span className="text-[0.52rem] font-black uppercase tracking-[0.08em] text-[#777064] sm:text-[0.65rem]">
-                        Price
-                      </span>
-                    </div>
-
-                    <ol className="grid min-h-0 auto-rows-min content-start gap-1.5 overflow-hidden pt-1 sm:gap-2">
-                      {categoryItems.map((item, index) => (
-                        <li
-                          key={item.menuid}
-                          className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 sm:gap-2"
-                        >
-                          <span className="grid size-4 shrink-0 place-items-center rounded-full border border-[#9c968c] font-serif text-[0.5rem] font-bold leading-none text-[#686158] sm:size-5 sm:text-[0.62rem]">
-                            {index + 1}
-                          </span>
-                          <div className="flex min-w-0 items-center gap-1">
-                            <span className="min-w-0 truncate text-[0.73rem] font-bold leading-tight text-[#302c27] sm:text-[0.95rem] lg:text-[1.06rem]">
-                              {item.name}
-                            </span>
-                            <span
-                              className="h-px min-w-3 flex-1 border-t border-dotted"
-                              style={{ borderColor: category.color }}
-                              aria-hidden="true"
-                            />
-                          </div>
-                          <span className="font-serif text-[0.72rem] font-black leading-none text-[#27231f] sm:text-[0.9rem] lg:text-[1rem]">
-                            {priceFormatter.format(item.cost)}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </section>
-                );
-              })}
+            <div className="grid h-full min-h-0 grid-cols-1 gap-x-4 gap-y-1 overflow-hidden sm:grid-cols-[1.45fr_1fr] sm:gap-x-12 lg:gap-x-20">
+              {renderCategory(categoryConfig[0])}
+              <div className="grid min-h-0 auto-rows-min content-start gap-y-7 overflow-hidden">
+                {renderCategory(categoryConfig[1])}
+                {renderCategory(categoryConfig[2])}
+              </div>
             </div>
           )}
         </div>
 
-        <footer className="grid min-h-0 grid-cols-1 gap-1 border-t border-[#d5cec2] bg-[#ebe7df] px-3 py-2 text-[#302c27] landscape:grid-cols-[1.25fr_1fr_1fr] sm:grid-cols-3 sm:gap-3 sm:px-5">
+        <footer className="grid min-h-0 grid-cols-1 gap-2 border-t border-[#d5cec2] bg-[#ebe7df] px-3 py-3 text-[#302c27] landscape:grid-cols-[1.25fr_1fr_1fr] sm:grid-cols-3 sm:gap-3 sm:px-5 sm:py-4">
           <section className="grid grid-cols-[auto_1fr] gap-2 sm:block">
-            <h3 className="whitespace-nowrap font-serif text-[0.62rem] font-black uppercase tracking-[0.12em] sm:mb-1 sm:text-[0.78rem]">
+            <h3 className="whitespace-nowrap font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-2 sm:mb-1 sm:text-[1.05rem]">
               Toppings
             </h3>
-            <p className="truncate text-[0.62rem] font-semibold leading-tight sm:text-[0.78rem] lg:text-[0.9rem]">
+            <p className="truncate text-[0.76rem] font-semibold leading-tight sm:text-[0.92rem] lg:text-[1.04rem]">
               {toppingText}
             </p>
           </section>
           <section className="grid grid-cols-[auto_1fr] gap-2 sm:block">
-            <h3 className="whitespace-nowrap font-serif text-[0.62rem] font-black uppercase tracking-[0.12em] sm:mb-1 sm:text-[0.78rem]">
+            <h3 className="whitespace-nowrap font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-2 sm:mb-1 sm:text-[1.05rem]">
               Sweetness Levels
             </h3>
-            <p className="truncate text-[0.62rem] font-semibold leading-tight sm:text-[0.78rem] lg:text-[0.9rem]">
+            <p className="truncate text-[0.76rem] font-semibold leading-tight sm:text-[0.92rem] lg:text-[1.04rem]">
               {sweetnessLevels.join(' • ')}
             </p>
           </section>
           <section className="grid grid-cols-[auto_1fr] gap-2 sm:block">
-            <h3 className="whitespace-nowrap font-serif text-[0.62rem] font-black uppercase tracking-[0.12em] sm:mb-1 sm:text-[0.78rem]">
+            <h3 className="whitespace-nowrap font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-2 sm:mb-1 sm:text-[1.05rem]">
               Ice Levels
             </h3>
-            <p className="truncate text-[0.62rem] font-semibold leading-tight sm:text-[0.78rem] lg:text-[0.9rem]">
+            <p className="truncate text-[0.76rem] font-semibold leading-tight sm:text-[0.92rem] lg:text-[1.04rem]">
               {iceLevels.join(' • ')}
             </p>
           </section>
