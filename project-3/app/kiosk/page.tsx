@@ -14,8 +14,6 @@ import {
   type CartItem,
 } from '@/components/pos-types';
 
-import { useLanguage } from '@/lib/LanguageContext';
-
 type ModalState =
   | { mode: 'add'; item: MenuItem }
   | { mode: 'edit'; item: CartItem; index: number };
@@ -122,7 +120,6 @@ function getWeatherRecommendationCopy(weather: WeatherApiResponse | null) {
 }
 
 export default function KioskPage() {
-  const { t } = useLanguage();
   const [items, setItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,17 +136,17 @@ export default function KioskPage() {
     async function loadMenu() {
       try {
         const response = await fetch('/api/menu');
-        if (!response.ok) throw new Error(t('Failed to load menu items.'));
+        if (!response.ok) throw new Error('Failed to load menu items.');
         const data: MenuItem[] = await response.json();
         setItems(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('Failed to load menu items.'));
+        setError(err instanceof Error ? err.message : 'Failed to load menu items.');
       } finally {
         setIsLoading(false);
       }
     }
     loadMenu();
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -314,7 +311,7 @@ export default function KioskPage() {
         }),
       });
 
-      if (!response.ok) throw new Error(t('Failed to place order.'));
+      if (!response.ok) throw new Error('Failed to place order.');
       setIsBrewing(true);
       window.setTimeout(() => {
         setIsBrewing(false);
@@ -322,7 +319,7 @@ export default function KioskPage() {
         setIsCartOpen(false);
       }, 2200);
     } catch (err) {
-      alert(err instanceof Error ? err.message : t('Failed to place order.'));
+      alert(err instanceof Error ? err.message : 'Failed to place order.');
     } finally {
       setIsPlacingOrder(false);
     }
@@ -406,25 +403,25 @@ export default function KioskPage() {
               <Link
                 href="/"
                 className="flex h-12 items-center justify-center rounded-full bg-[#f8f1e7] px-5 text-base font-bold text-[#4a554a] transition-all hover:bg-[#e6d8c4] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
-                aria-label={t('Back to Portal')}
+                aria-label="Back to Portal"
               >
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="mr-2" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
-                {t('Portal')}
+                Portal
               </Link>
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
-                  {t('Self Service')}
+                  Self Service
                 </p>
                 <h1 className="text-3xl font-extrabold tracking-tight text-[#1f2520] lg:text-4xl">
-                  {t('Kiosk Ordering')}
+                  Kiosk Ordering
                 </h1>
               </div>
             </div>
           </div>
 
-          <nav className="mt-6 flex gap-3 overflow-x-auto pb-2" aria-label={t('Menu categories')}>
+          <nav className="mt-6 flex gap-3 overflow-x-auto pb-2" aria-label="Menu categories">
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -438,7 +435,7 @@ export default function KioskPage() {
                 <span aria-hidden="true">
                   <CategoryIcon iconName={getCategoryIcon(cat)} />
                 </span>
-                {t(cat)}
+                {cat}
               </button>
             ))}
           </nav>
@@ -450,23 +447,23 @@ export default function KioskPage() {
               <div className="rounded-[28px] bg-[#1f2520] px-6 py-6 text-white shadow-[0_18px_44px_rgba(31,37,32,0.18)]">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#dcefe4]">
-                    {t('Weather Pick')}
+                    Weather Pick
                   </span>
                   {featuredItem && getItemBadge(featuredItem.name) ? (
                     <span className="rounded-full bg-[#d9b16f] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#1f2520]">
-                      {t(getItemBadge(featuredItem.name) as string)}
+                      {getItemBadge(featuredItem.name)}
                     </span>
                   ) : null}
                 </div>
                 <h2 className="mt-4 max-w-xl text-3xl font-bold leading-tight lg:text-4xl">
-                  {featuredItem ? t(featuredItem.name) : t('Fresh whisked matcha, ready in minutes.')}
+                  {featuredItem ? featuredItem.name : 'Fresh whisked matcha, ready in minutes.'}
                 </h2>
                 <p className="mt-3 max-w-2xl text-base leading-7 text-white/82">
-                  {t(getWeatherRecommendationCopy(weather))}
+                  {getWeatherRecommendationCopy(weather)}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <span className="rounded-full border border-white/18 bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
-                    {t(weatherSummary)}
+                    {weatherSummary}
                   </span>
                   {weather?.location?.label ? (
                     <span className="rounded-full border border-white/18 bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
@@ -479,10 +476,10 @@ export default function KioskPage() {
                     onClick={() => featuredItem && setModalState({ mode: 'add', item: featuredItem })}
                     className="min-h-[56px] rounded-full bg-white px-6 py-3 text-base font-bold text-[#1f2520] transition hover:bg-[#eef1ec] focus:outline-none focus:ring-4 focus:ring-white/60"
                   >
-                    {t('Customize Recommended Drink')}
+                    Customize Recommended Drink
                   </button>
                   <div className="inline-flex min-h-[56px] items-center rounded-full border border-white/18 px-5 py-3 text-base font-semibold text-white/88">
-                    {featuredItem ? currencyFormatter.format(featuredItem.cost) : t('Cafe favorites')}
+                    {featuredItem ? currencyFormatter.format(featuredItem.cost) : 'Cafe favorites'}
                   </div>
                 </div>
               </div>
@@ -502,10 +499,10 @@ export default function KioskPage() {
                   )}
                   <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(31,37,32,0.82)_100%)] p-5 text-white">
                     <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/72">
-                      {t('Highlighted Drink')}
+                      Highlighted Drink
                     </p>
                     <p className="mt-2 text-2xl font-bold">
-                      {featuredItem ? t(featuredItem.name) : t('House Favorite')}
+                      {featuredItem ? featuredItem.name : 'House Favorite'}
                     </p>
                   </div>
                 </div>
@@ -515,26 +512,26 @@ export default function KioskPage() {
             <div className="grid gap-4">
               <div className="rounded-[28px] border border-[#dce5d8] bg-white p-5 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
-                  {t('Weather Pairing')}
+                  Weather Pairing
                 </p>
                 <p className="mt-3 text-2xl font-bold text-[#1f2520]">
-                  {weather ? t(weather.current.condition) : t('House guidance')}
+                  {weather ? weather.current.condition : 'House guidance'}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[#4a554a]">
-                  {t(getWeatherRecommendationCopy(weather))}
+                  {getWeatherRecommendationCopy(weather)}
                 </p>
                 {featuredItem ? (
                   <button
                     onClick={() => setModalState({ mode: 'add', item: featuredItem })}
                     className="mt-4 min-h-[48px] rounded-full bg-[#eef1ec] px-5 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
                   >
-                    {t('Order This Recommendation')}
+                    Order This Recommendation
                   </button>
                 ) : null}
               </div>
 
               <div className="rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Seasonal Spotlight')}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Seasonal Spotlight</p>
                 <div className="mt-3 grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
                   <div className="overflow-hidden rounded-[20px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
                     {seasonalItem?.image_url ? (
@@ -551,10 +548,10 @@ export default function KioskPage() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-[#1f2520]">
-                      {seasonalItem ? t(seasonalItem.name) : t('House Favorites')}
+                      {seasonalItem ? seasonalItem.name : 'House Favorites'}
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-[#4a554a]">
-                      {t('A brighter, limited-time style item to pull attention toward specials and make the kiosk feel alive.')}
+                      A brighter, limited-time style item to pull attention toward specials and make the kiosk feel alive.
                     </p>
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       {seasonalItem ? (
@@ -567,7 +564,7 @@ export default function KioskPage() {
                           onClick={() => setModalState({ mode: 'add', item: seasonalItem })}
                           className="min-h-[44px] rounded-full bg-[#1f2520] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#313832] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
                         >
-                          {t('Order Brown Sugar Tea')}
+                          Order Brown Sugar Tea
                         </button>
                       ) : null}
                     </div>
@@ -577,19 +574,19 @@ export default function KioskPage() {
 
               <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                 <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Menu')}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Menu</p>
                   <p className="mt-2 text-3xl font-bold text-[#1f2520]">{items.length}</p>
-                  <p className="mt-1 text-sm text-[#4a554a]">{t('drinks and treats')}</p>
+                  <p className="mt-1 text-sm text-[#4a554a]">drinks and treats</p>
                 </div>
                 <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Browsing')}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Browsing</p>
                   <p className="mt-2 text-3xl font-bold text-[#1f2520]">{filteredItems.length}</p>
-                  <p className="mt-1 text-sm text-[#4a554a]">{t(activeCategory)}</p>
+                  <p className="mt-1 text-sm text-[#4a554a]">{activeCategory}</p>
                 </div>
                 <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">{t('Cart')}</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Cart</p>
                   <p className="mt-2 text-3xl font-bold text-[#1f2520]">{cartItemCount}</p>
-                  <p className="mt-1 text-sm text-[#4a554a]">{t('items selected')}</p>
+                  <p className="mt-1 text-sm text-[#4a554a]">items selected</p>
                 </div>
               </div>
             </div>
@@ -598,12 +595,12 @@ export default function KioskPage() {
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
-                {t('Browse')}
+                Browse
               </p>
-              <h2 className="mt-2 text-3xl font-bold text-[#1f2520]">{t('Drinks and Treats')}</h2>
+              <h2 className="mt-2 text-3xl font-bold text-[#1f2520]">Drinks and Treats</h2>
             </div>
             <p className="text-sm text-[#4a554a]">
-              {filteredItems.length} {t('items in this section')}
+              {filteredItems.length} items in this section
             </p>
           </div>
 
@@ -645,7 +642,7 @@ export default function KioskPage() {
               <span className={`flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-lg font-bold ${animateCartBadge ? 'animate-cart-bump' : ''}`}>
                 {cartItemCount}
               </span>
-              <span className="text-xl font-bold">{t('View Order')}</span>
+              <span className="text-xl font-bold">View Order</span>
             </div>
             <span className="text-xl font-bold">
               {currencyFormatter.format(cartTotal)}
@@ -693,7 +690,7 @@ export default function KioskPage() {
             modalState.mode === 'edit' ? modalState.item.topping : undefined
           }
           confirmLabel={
-            modalState.mode === 'edit' ? t('Save Changes') : t('Add to Order')
+            modalState.mode === 'edit' ? 'Save Changes' : 'Add to Order'
           }
           presentation="fullscreen"
         />
@@ -711,10 +708,10 @@ export default function KioskPage() {
                 <div className="animate-brew-pulse relative z-10 mb-5 text-4xl">🍵</div>
               </div>
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">{t('Brewing')}</p>
-            <h2 className="mt-3 text-3xl font-bold text-[#1f2520]">{t('Preparing your order')}</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">Brewing</p>
+            <h2 className="mt-3 text-3xl font-bold text-[#1f2520]">Preparing your order</h2>
             <p className="mt-3 text-base leading-7 text-[#4a554a]">
-              {t('Your drinks are being whisked, shaken, and queued for pickup.')}
+              Your drinks are being whisked, shaken, and queued for pickup.
             </p>
             <div className="mt-6 overflow-hidden rounded-full bg-[#dce5d8]">
               <div className="animate-brew-fill h-3 rounded-full bg-[linear-gradient(90deg,#6d8a6f_0%,#2f7a5f_100%)]" />
