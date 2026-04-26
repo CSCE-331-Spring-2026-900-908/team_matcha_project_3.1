@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 
 import pool from '@/lib/db';
+import { earnPoints } from './rewards';
 
 async function syncSequence(
   connection: PoolClient,
@@ -28,7 +29,8 @@ export async function createOrder(
     iceLevel?: string;
     sugarLevel?: string;
     toppings?: string[];
-  }[]
+  }[],
+  userID?: number
 ) {
   const connection = await pool.connect();
   try {
@@ -56,6 +58,10 @@ export async function createOrder(
           item.toppings?.join(', ') || 'None',
         ]
       );
+    }
+    if(userID) 
+    {
+      await earnPoints(connection, userID, orderId, costTotal);
     }
     await connection.query('COMMIT');
 
