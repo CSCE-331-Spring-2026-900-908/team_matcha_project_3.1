@@ -57,7 +57,7 @@ export default function InventoryPage() {
 
     async function loadInventory() {
       try {
-        const response = await fetch('/api/manager/inventory');
+        const response = await authFetch('/api/manager/inventory');
 
         if (!response.ok) {
           throw new Error('Failed to load inventory data.');
@@ -152,7 +152,7 @@ export default function InventoryPage() {
     setSaveError(null);
 
     try {
-      const response = await fetch('/api/manager/inventory', {
+      const response = await authFetch('/api/manager/inventory', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -209,7 +209,7 @@ export default function InventoryPage() {
     setCreateError(null);
 
     try {
-      const response = await fetch('/api/manager/inventory', {
+      const response = await authFetch('/api/manager/inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
