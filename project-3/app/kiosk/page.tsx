@@ -429,7 +429,7 @@ export default function KioskPage() {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`inline-flex min-h-[56px] items-center gap-3 whitespace-nowrap rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
+                className={`inline-flex min-h-[56px] shrink-0 items-center gap-3 whitespace-nowrap rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2f7a5f] ${
                   activeCategory === cat
                     ? 'bg-[#2f7a5f] text-white shadow-md shadow-[#2f7a5f]/20'
                     : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#e6d8c4]'
@@ -618,7 +618,7 @@ export default function KioskPage() {
         </div>
       </section>
 
-      <div className="hidden lg:block">
+      <div className="hidden lg:flex lg:self-stretch">
         <CartSidebar
           cart={cart}
           onAdd={addToCart}

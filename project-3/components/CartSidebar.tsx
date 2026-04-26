@@ -35,14 +35,13 @@ export default function CartSidebar({
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const tax = subtotal * 0.0825;
   const total = subtotal + tax;
-  const hasCartItems = totalItems > 0;
 
   if (!isOpen) return null;
 
   const sidebarContent = (
     <aside
       className={`flex flex-col bg-[linear-gradient(180deg,#fffdf9_0%,#f7faf7_100%)] shadow-2xl ${
-        isMobileOverlay ? 'h-full w-full' : 'w-full lg:w-[450px]'
+        isMobileOverlay ? 'h-full w-full' : 'w-full lg:h-screen lg:w-[450px]'
       }`}
     >
       <header className="border-b border-[#eadfce] p-8">
@@ -69,25 +68,6 @@ export default function CartSidebar({
           <span className={`rounded-full bg-[#2f7a5f] px-4 py-1.5 text-sm font-bold text-white ${animateCountBadge ? 'animate-cart-bump' : ''}`}>
             {totalItems} {t('items')}
           </span>
-        </div>
-
-        <div className="mt-6 grid grid-cols-3 gap-2 rounded-[20px] bg-[#eef1ec] p-2 text-center">
-          <div className="rounded-[16px] bg-[#2f7a5f] px-3 py-3 text-white shadow-md">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">1</p>
-            <p className="mt-1 text-sm font-semibold">{t('Choose')}</p>
-          </div>
-          <div className={`rounded-[16px] px-3 py-3 ${hasCartItems ? 'bg-[#2f7a5f] text-white shadow-md' : 'bg-white text-[#8b958b]'}`}>
-            <p className={`text-xs font-bold uppercase tracking-[0.18em] ${hasCartItems ? 'text-white/80' : 'text-[#8b958b]'}`}>2</p>
-            <p className="mt-1 text-sm font-semibold">{t('Review')}</p>
-          </div>
-          <div className="rounded-[16px] bg-white px-3 py-3">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6d8a6f]">3</p>
-            <p className="mt-1 text-sm font-semibold text-[#1f2520]">{t('Place')}</p>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-[20px] border border-[#dce5d8] bg-white px-4 py-3 text-sm text-[#4a554a] shadow-sm">
-          <span className="font-bold text-[#2f7a5f]">{t('Cafe note')}:</span> {t('Most drinks are ready in 5 to 8 minutes.')}
         </div>
       </header>
 
@@ -172,8 +152,8 @@ export default function CartSidebar({
         )}
       </section>
 
-      <footer className="border-t border-[#eadfce] bg-[linear-gradient(180deg,#fffdf9_0%,#f8f1e7_100%)] p-8 shadow-[0_-8px_30px_rgba(47,36,29,0.06)]">
-        <div className="space-y-5 rounded-[28px] border border-[#eadfce] bg-white p-6 shadow-sm">
+      <footer className="border-t border-[#eadfce] bg-[linear-gradient(180deg,#fffdf9_0%,#f8f1e7_100%)] p-6 shadow-[0_-8px_30px_rgba(47,36,29,0.06)]">
+        <div className="space-y-4 rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm">
           {extraFields}
 
           <div className="flex justify-between text-base">
@@ -184,7 +164,7 @@ export default function CartSidebar({
             <span className="font-medium text-[#4a554a]">{t('Estimated Tax')} (8.25%)</span>
             <span className="font-bold text-[#1f2520]">{currencyFormatter.format(tax)}</span>
           </div>
-          <div className="flex justify-between border-t border-[#eadfce] pt-5 text-2xl font-extrabold">
+          <div className="flex justify-between border-t border-[#eadfce] pt-4 text-2xl font-extrabold">
             <span className="text-[#1f2520]">{t('Total')}</span>
             <span className="text-[#2f7a5f]">{currencyFormatter.format(total)}</span>
           </div>
@@ -195,7 +175,7 @@ export default function CartSidebar({
               onPlaceOrder();
               if (isMobileOverlay && onClose) onClose();
             }}
-            className="w-full min-h-[64px] rounded-[24px] bg-[#2f7a5f] py-5 text-xl font-bold text-white shadow-xl shadow-[#2f7a5f]/20 transition-all hover:bg-[#25614b] active:scale-95 disabled:grayscale disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
+            className="w-full min-h-[60px] rounded-[24px] bg-[#2f7a5f] py-4 text-xl font-bold text-white shadow-xl shadow-[#2f7a5f]/20 transition-all hover:bg-[#25614b] active:scale-95 disabled:grayscale disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
           >
             {isPlacingOrder ? t('Placing Order...') : t('Place Order')}
           </button>
