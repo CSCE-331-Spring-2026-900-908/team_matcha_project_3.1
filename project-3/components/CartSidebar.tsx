@@ -1,7 +1,6 @@
 'use client';
 
 import { currencyFormatter, type CartItem } from './pos-types';
-import { useLanguage } from '@/lib/LanguageContext';
 
 type Props = {
   cart: CartItem[];
@@ -30,7 +29,6 @@ export default function CartSidebar({
   onClose,
   animateCountBadge = false,
 }: Props) {
-  const { t } = useLanguage();
   const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const tax = subtotal * 0.0825;
@@ -51,7 +49,7 @@ export default function CartSidebar({
               <button
                 onClick={onClose}
                 className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f8f1e7] text-[#4a554a] transition-colors hover:bg-[#e6d8c4] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
-                aria-label={t('Back to Menu')}
+                aria-label="Back to Menu"
               >
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -60,18 +58,18 @@ export default function CartSidebar({
             )}
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
-                {t('Review')}
+                Review
               </p>
-              <h2 className="mt-2 text-2xl font-extrabold text-[#1f2520]">{t('Your Order')}</h2>
+              <h2 className="mt-2 text-2xl font-extrabold text-[#1f2520]">Your Order</h2>
             </div>
           </div>
           <span className={`rounded-full bg-[#2f7a5f] px-4 py-1.5 text-sm font-bold text-white ${animateCountBadge ? 'animate-cart-bump' : ''}`}>
-            {totalItems} {t('items')}
+            {totalItems} items
           </span>
         </div>
       </header>
 
-      <section className="flex-1 overflow-y-auto p-8" aria-live="polite" aria-label={t('Cart contents')}>
+      <section className="flex-1 overflow-y-auto p-8" aria-live="polite" aria-label="Cart contents">
         {cart.length === 0 ? (
           <div className="mt-12 rounded-[28px] border border-dashed border-[#d7c6b2] bg-white px-6 py-12 text-center text-[#4a554a] shadow-sm">
             <div
@@ -80,8 +78,8 @@ export default function CartSidebar({
             >
               🍵
             </div>
-            <p className="text-xl font-bold text-[#1f2520]">{t('No items yet')}</p>
-            <p className="mt-2 text-base opacity-80">{t('Tap a drink card to start building your order.')}</p>
+            <p className="text-xl font-bold text-[#1f2520]">No items yet</p>
+            <p className="mt-2 text-base opacity-80">Tap a drink card to start building your order.</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -97,15 +95,15 @@ export default function CartSidebar({
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="font-bold leading-tight text-[#1f2520]">{t(item.name)}</h4>
+                        <h4 className="font-bold leading-tight text-[#1f2520]">{item.name}</h4>
                         <p className="mt-2 text-sm text-[#4a554a]">
                           {[
-                            item.iceLevel ? t(item.iceLevel) : null,
-                            item.sugarLevel ? t(item.sugarLevel) : null,
-                            item.topping && item.topping !== 'None' ? t(item.topping) : null,
+                            item.iceLevel ?? null,
+                            item.sugarLevel ?? null,
+                            item.topping && item.topping !== 'None' ? item.topping : null,
                           ]
                             .filter(Boolean)
-                            .join(' • ') || t('Standard build')}
+                            .join(' • ') || 'Standard build'}
                         </p>
                       </div>
                       <p className="rounded-full bg-[#eef1ec] px-3 py-1 text-sm font-bold text-[#2f7a5f]">
@@ -118,14 +116,14 @@ export default function CartSidebar({
                           onClick={() => onEditItem(index)}
                           className="min-h-[40px] rounded-full bg-[#f8f1e7] px-5 py-2 text-sm font-bold text-[#2f7a5f] ring-1 ring-[#eadfce] transition-all hover:bg-[#efe3d0] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
                         >
-                          {t('Edit Drink')}
+                          Edit Drink
                         </button>
                       )}
                       <div className="ml-auto flex items-center gap-1 rounded-[18px] border border-[#eadfce] bg-[#fdfaf6] p-1.5">
                         <button
                           onClick={() => onRemove(item.menuid)}
                           className="flex h-11 w-11 items-center justify-center rounded-[14px] text-[#4a554a] transition-colors hover:bg-white hover:text-red-700 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-inset"
-                          aria-label={`${t('Decrease quantity of')} ${item.name}`}
+                          aria-label={`Decrease quantity of ${item.name}`}
                         >
                           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                             <path d="M18 12H6" />
@@ -135,7 +133,7 @@ export default function CartSidebar({
                         <button
                           onClick={() => onAdd(item)}
                           className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#2f7a5f] transition-colors hover:bg-[#eef1ec] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-inset"
-                          aria-label={`${t('Increase quantity of')} ${item.name}`}
+                          aria-label={`Increase quantity of ${item.name}`}
                         >
                           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                             <path d="M12 6v12m-6-6h12" />
@@ -157,15 +155,15 @@ export default function CartSidebar({
           {extraFields}
 
           <div className="flex justify-between text-base">
-            <span className="font-medium text-[#4a554a]">{t('Subtotal')}</span>
+            <span className="font-medium text-[#4a554a]">Subtotal</span>
             <span className="font-bold text-[#1f2520]">{currencyFormatter.format(subtotal)}</span>
           </div>
           <div className="flex justify-between text-base">
-            <span className="font-medium text-[#4a554a]">{t('Estimated Tax')} (8.25%)</span>
+            <span className="font-medium text-[#4a554a]">Estimated Tax (8.25%)</span>
             <span className="font-bold text-[#1f2520]">{currencyFormatter.format(tax)}</span>
           </div>
           <div className="flex justify-between border-t border-[#eadfce] pt-4 text-2xl font-extrabold">
-            <span className="text-[#1f2520]">{t('Total')}</span>
+            <span className="text-[#1f2520]">Total</span>
             <span className="text-[#2f7a5f]">{currencyFormatter.format(total)}</span>
           </div>
 
@@ -177,7 +175,7 @@ export default function CartSidebar({
             }}
             className="w-full min-h-[60px] rounded-[24px] bg-[#2f7a5f] py-4 text-xl font-bold text-white shadow-xl shadow-[#2f7a5f]/20 transition-all hover:bg-[#25614b] active:scale-95 disabled:grayscale disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
           >
-            {isPlacingOrder ? t('Placing Order...') : t('Place Order')}
+            {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
           </button>
         </div>
       </footer>

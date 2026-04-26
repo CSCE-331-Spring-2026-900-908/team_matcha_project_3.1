@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { MenuItem, CartItem, currencyFormatter } from './pos-types';
-import { useLanguage } from '@/lib/LanguageContext';
 
 type Props = {
   item: MenuItem;
@@ -40,7 +39,6 @@ export default function CustomizationModal({
   confirmLabel,
   presentation = 'dialog',
 }: Props) {
-  const { t } = useLanguage();
   const [iceLevel, setIceLevel] = useState(initialIceLevel ?? DEFAULT_ICE_LEVEL);
   const [sugarLevel, setSugarLevel] = useState(initialSugarLevel ?? DEFAULT_SUGAR_LEVEL);
   const [topping, setTopping] = useState(initialTopping ?? DEFAULT_TOPPING);
@@ -59,7 +57,7 @@ export default function CustomizationModal({
     });
   };
 
-  const finalConfirmLabel = confirmLabel || t('Add to Order');
+  const finalConfirmLabel = confirmLabel || 'Add to Order';
 
   if (presentation === 'fullscreen') {
     return (
@@ -81,17 +79,17 @@ export default function CustomizationModal({
             </div>
             <div className="absolute bottom-6 left-6 right-6 rounded-[28px] bg-white/92 p-5 shadow-xl backdrop-blur">
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
-                {t('Drink Summary')}
+                Drink Summary
               </p>
               <h3 className="mt-2 text-2xl font-bold text-[#1f2520]">{item.name}</h3>
               <p className="mt-2 text-sm leading-6 text-[#4a554a]">
-                {t('Choose the sweetness, ice, and topping combination that fits the guest and the drink.')}
+                Choose the sweetness, ice, and topping combination that fits the guest and the drink.
               </p>
             </div>
             <button
               onClick={onClose}
               className="absolute right-6 top-6 flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-[#1f2520] shadow-lg transition-all hover:bg-white focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
-              aria-label={t('Close customization')}
+              aria-label="Close customization"
             >
               <svg
                 width="28"
@@ -111,7 +109,7 @@ export default function CustomizationModal({
               <div className="mx-auto w-full max-w-4xl">
                 <header className="border-b border-[#eadfce] pb-8">
                   <p className="text-base font-bold uppercase tracking-[0.3em] text-[#4a554a]">
-                    {t('Customize Your Drink')}
+                    Customize Your Drink
                   </p>
                   <h2 className="mt-4 text-4xl font-bold text-[#1f2520] sm:text-5xl lg:text-6xl">
                     {item.name}
@@ -121,11 +119,11 @@ export default function CustomizationModal({
                       {currencyFormatter.format(totalCost)}
                     </p>
                     <span className="rounded-full border border-[#dce5d8] bg-[#eef1ec] px-5 py-1.5 text-sm font-bold text-[#2f7a5f]">
-                      {t('Made to order')}
+                      Made to order
                     </span>
                     {toppingCost > 0 && (
                       <span className="text-sm font-bold text-[#4a554a] bg-[#f8f1e7] px-5 py-1.5 rounded-full border border-[#eadfce]">
-                        {t('Includes')} {currencyFormatter.format(toppingCost)} {t('add-on')}
+                        Includes {currencyFormatter.format(toppingCost)} add-on
                       </span>
                     )}
                   </div>
@@ -134,7 +132,7 @@ export default function CustomizationModal({
                 <div className="mt-10 space-y-8">
                   <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
-                      {t('Ice Level')}
+                      Ice Level
                     </h3>
                     <div className="mt-6 flex flex-wrap gap-4">
                       {ICE_LEVELS.map((level) => (
@@ -147,7 +145,7 @@ export default function CustomizationModal({
                               : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                           }`}
                         >
-                          {t(level)}
+                          {level}
                         </button>
                       ))}
                     </div>
@@ -155,7 +153,7 @@ export default function CustomizationModal({
 
                   <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
-                      {t('Sugar Level')}
+                      Sugar Level
                     </h3>
                     <div className="mt-6 flex flex-wrap gap-4">
                       {SUGAR_LEVELS.map((level) => (
@@ -168,7 +166,7 @@ export default function CustomizationModal({
                               : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                           }`}
                         >
-                          {t(level)}
+                          {level}
                         </button>
                       ))}
                     </div>
@@ -176,7 +174,7 @@ export default function CustomizationModal({
 
                   <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
-                      {t('Toppings')}
+                      Toppings
                     </h3>
                     <div className="mt-6 flex flex-wrap gap-4">
                       {TOPPINGS.map((t_name) => (
@@ -189,7 +187,7 @@ export default function CustomizationModal({
                               : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                           }`}
                         >
-                          {t(t_name)}
+                          {t_name}
                           {TOPPING_COSTS[t_name] > 0 && (
                             <span className="ml-2 opacity-70 font-medium">
                               (+{currencyFormatter.format(TOPPING_COSTS[t_name])})
@@ -207,7 +205,7 @@ export default function CustomizationModal({
               <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-6">
                 <div className="hidden sm:block">
                   <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
-                    {t('Current total')}
+                    Current total
                   </p>
                   <p className="mt-2 text-3xl font-bold text-[#1f2520]">
                     {currencyFormatter.format(totalCost)}
@@ -239,7 +237,7 @@ export default function CustomizationModal({
           <button
             onClick={onClose}
             className="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-[#1f2520] shadow-md hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
-            aria-label={t('Close customization')}
+            aria-label="Close customization"
           >
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -253,7 +251,7 @@ export default function CustomizationModal({
             <p className="text-2xl font-bold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
             {toppingCost > 0 && (
               <span className="text-sm font-bold text-[#4a554a] bg-[#f8f1e7] px-3 py-1 rounded-full border border-[#eadfce]">
-                {t('Includes')} {currencyFormatter.format(toppingCost)} {t('add-on')}
+                Includes {currencyFormatter.format(toppingCost)} add-on
               </span>
             )}
           </div>
@@ -261,7 +259,7 @@ export default function CustomizationModal({
           <div className="mt-8 space-y-8 max-h-[50vh] overflow-y-auto pr-2">
             {/* Ice Level */}
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">{t('Ice Level')}</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Ice Level</h3>
               <div className="mt-3 flex flex-wrap gap-3">
                 {ICE_LEVELS.map((level) => (
                   <button
@@ -273,7 +271,7 @@ export default function CustomizationModal({
                         : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                     }`}
                   >
-                    {t(level)}
+                    {level}
                   </button>
                 ))}
               </div>
@@ -281,7 +279,7 @@ export default function CustomizationModal({
 
             {/* Sugar Level */}
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">{t('Sugar Level')}</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Sugar Level</h3>
               <div className="mt-3 flex flex-wrap gap-3">
                 {SUGAR_LEVELS.map((level) => (
                   <button
@@ -293,7 +291,7 @@ export default function CustomizationModal({
                         : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                     }`}
                   >
-                    {t(level)}
+                    {level}
                   </button>
                 ))}
               </div>
@@ -301,7 +299,7 @@ export default function CustomizationModal({
 
             {/* Toppings */}
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">{t('Toppings')}</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Toppings</h3>
               <div className="mt-3 flex flex-wrap gap-3">
                 {TOPPINGS.map((t_name) => (
                   <button
@@ -313,7 +311,7 @@ export default function CustomizationModal({
                         : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                     }`}
                   >
-                    {t(t_name)}
+                    {t_name}
                     {TOPPING_COSTS[t_name] > 0 && (
                       <span className="ml-1.5 opacity-70 font-medium">
                         (+{currencyFormatter.format(TOPPING_COSTS[t_name])})
