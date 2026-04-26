@@ -7,7 +7,6 @@ import {
   getItemDescription,
   type MenuItem,
 } from './pos-types';
-import { useLanguage } from '@/lib/LanguageContext';
 
 type Props = {
   items: MenuItem[];
@@ -22,8 +21,6 @@ export default function MenuGrid({
   onSelectItem,
   showAddIcon = true,
 }: Props) {
-  const { t } = useLanguage();
-
   const renderIcon = (iconName: string) => {
     switch (iconName) {
       case 'Leaf':
@@ -77,7 +74,7 @@ export default function MenuGrid({
                 {item.image_url ? (
                   <img
                     src={item.image_url}
-                    alt={`${item.name} - ${t(categorizeItem(item.name))}`}
+                    alt={`${item.name} - ${categorizeItem(item.name)}`}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 ) : (
@@ -88,32 +85,32 @@ export default function MenuGrid({
                 <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/88 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#4a554a] backdrop-blur">
                     {renderIcon(getCategoryIcon(categorizeItem(item.name)))}
-                    {t(categorizeItem(item.name))}
+                    {categorizeItem(item.name)}
                   </span>
                   {getItemBadge(item.name) ? (
                     <span className="rounded-full bg-[#1f2520]/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white">
-                      {t(getItemBadge(item.name) as string)}
+                      {getItemBadge(item.name)}
                     </span>
                   ) : null}
                 </div>
               </div>
               <div className="flex flex-1 flex-col p-6 text-left">
-                <h3 className="text-[1.45rem] font-bold leading-tight text-[#1f2520]">{t(item.name)}</h3>
+                <h3 className="text-[1.45rem] font-bold leading-tight text-[#1f2520]">{item.name}</h3>
                 <p className="mt-3 text-sm leading-6 text-[#5c655c]">
-                  {t(getItemDescription(item.name))}
+                  {getItemDescription(item.name)}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <span className="rounded-full bg-[#eef1ec] px-3 py-1 text-xs font-semibold text-[#4a554a]">
-                    {t('Customizable')}
+                    Customizable
                   </span>
                   <span className="rounded-full bg-[#f8f1e7] px-3 py-1 text-xs font-semibold text-[#7b6041]">
-                    {t('Ready fast')}
+                    Ready fast
                   </span>
                 </div>
                 <div className="mt-auto flex items-end justify-between gap-4 pt-6">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#6d8a6f]">
-                      {t('Starting at')}
+                      Starting at
                     </p>
                     <p className="mt-2 inline-flex rounded-full bg-[#2f7a5f] px-4 py-2 text-xl font-bold text-white shadow-lg shadow-[#2f7a5f]/15">
                       {currencyFormatter.format(item.cost)}
@@ -122,9 +119,9 @@ export default function MenuGrid({
                   <button
                     onClick={() => onSelectItem(item)}
                     className="inline-flex min-h-[52px] items-center gap-3 rounded-full border border-[#cfe0d1] bg-white px-5 py-3 text-base font-bold text-[#2f7a5f] transition-all hover:border-[#2f7a5f] hover:bg-[#f3f8f4] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
-                    aria-label={`${t('Add')} ${item.name} ${t('to order')}`}
+                    aria-label={`Add ${item.name} to order`}
                   >
-                    <span>{showAddIcon ? t('Add Drink') : t('Customize')}</span>
+                    <span>{showAddIcon ? 'Add Drink' : 'Customize'}</span>
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#eef1ec] text-[#2f7a5f]" aria-hidden="true">
                       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path d="M12 6v12m-6-6h12" />

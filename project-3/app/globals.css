@@ -259,6 +259,111 @@ html.accessibility-mode .rounded-2xl { border-radius: 24px !important; }
 
 html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
 
+.google-translate-widget {
+  min-width: 0;
+}
+
+.google-translate-widget .goog-te-gadget {
+  color: var(--matcha-ink) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.95rem !important;
+  line-height: 1.2 !important;
+}
+
+.google-translate-widget .goog-te-gadget > span {
+  display: none !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.45rem !important;
+  width: auto !important;
+  min-height: 36px !important;
+  padding: 0.45rem 0.7rem !important;
+  border: 1px solid #c8d1c4 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #fffdf9 0%, #f8faf7 100%) !important;
+  box-shadow: 0 10px 24px rgba(47, 36, 29, 0.08) !important;
+  text-decoration: none !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple::before {
+  content: "Translate";
+  color: var(--matcha-ink) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple:hover {
+  border-color: #9ab29b !important;
+  box-shadow: 0 14px 28px rgba(47, 36, 29, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+.google-translate-widget .goog-te-gadget-simple:focus-within {
+  outline: none !important;
+  border-color: #2f7a5f !important;
+  box-shadow:
+    0 0 0 4px rgba(47, 122, 95, 0.18),
+    0 14px 28px rgba(47, 36, 29, 0.12) !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple .VIpgJd-ZVi9od-xl07Ob-lTBxed {
+  display: none !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple img,
+.google-translate-widget .goog-te-gadget-simple .goog-te-gadget-icon {
+  display: none !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple .goog-te-menu-value {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 0 !important;
+  width: auto !important;
+  margin: 0 !important;
+  color: var(--matcha-ink) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple .goog-te-menu-value span {
+  display: none !important;
+  border: 0 !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple .goog-te-menu-value span:last-child {
+  display: none !important;
+}
+
+.google-translate-widget .goog-te-gadget-simple .goog-te-menu-value::after {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  flex-shrink: 0;
+  border-right: 2px solid #2f7a5f;
+  border-bottom: 2px solid #2f7a5f;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+html.accessibility-mode .google-translate-widget .goog-te-gadget,
+html.accessibility-mode .google-translate-widget .goog-te-menu-value {
+  font-size: 1rem !important;
+}
+
 /* High Contrast Interactive Elements using Matcha Colors */
 html.accessibility-mode button, 
 html.accessibility-mode a {
