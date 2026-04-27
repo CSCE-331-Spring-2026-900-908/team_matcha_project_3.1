@@ -15,6 +15,16 @@ import {
   type CartItem,
 } from '@/components/pos-types';
 
+
+
+type KioskUser = {
+  userId: number;
+  name: string;
+  email: string;
+};
+
+
+
 type ModalState =
   | { mode: 'add'; item: MenuItem }
   | { mode: 'edit'; item: CartItem; index: number };
@@ -121,6 +131,11 @@ function getWeatherRecommendationCopy(weather: WeatherApiResponse | null) {
 }
 
 export default function KioskPage() {
+  const [kioskUser, setKioskUser] = useState<KioskUser | null>(null);
+  const [points, setPoints] = useState(0);
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [redeemSuccess, setRedeemSuccess] = useState(false);
+  const [googleScriptReady, setGoogleScriptReady] = useState(false);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -174,6 +189,81 @@ export default function KioskPage() {
       isMounted = false;
     };
   }, []);
+
+  
+
+  useEffect(() => {
+    // Load Google Sign-In script
+    if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+      setGoogleScriptReady(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = () => setGoogleScriptReady(true);
+    document.body.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+  if (!googleScriptReady || kioskUser) return;
+
+  const handleCredentialResponse = async (response: any) => {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: response.credential }),
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      // Store token exactly like the login page does
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_role', data.user.role);
+      localStorage.setItem('user_name', data.user.name);
+
+      // Decode userId from JWT (middle base64 segment)
+      const payload = JSON.parse(atob(data.token.split('.')[1]));
+
+      setKioskUser({
+        userId: payload.userId,
+        name: data.user.name,
+        email: data.user.email,
+      });
+    } catch (err) {
+      console.error('Kiosk sign-in error:', err);
+    }
+  };
+
+  window.google.accounts.id.initialize({
+    client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse,
+  });
+}, [googleScriptReady, kioskUser]);
+
+useEffect(() => {
+  if (!kioskUser) return;
+
+  async function loadPoints() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      const res = await fetch('/api/rewards', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setPoints(data.points ?? 0);
+    } catch {
+      // non-critical — silently ignore
+    }
+  }
+
+  loadPoints();
+}, [kioskUser]);
 
   const categories = useMemo(() => {
     const cats = new Set(items.map((item) => categorizeItem(item.name)));
@@ -287,6 +377,31 @@ export default function KioskPage() {
     });
   };
 
+  const handleRedeem = async () => {
+  if (isRedeeming || points < 50) return;
+  setIsRedeeming(true);
+  const token = localStorage.getItem('auth_token');
+  try {
+    const res = await fetch('/api/rewards/redeem', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error ?? 'Could not redeem points.');
+      return;
+    }
+    const data = await res.json();
+    setPoints(data.points);
+    setRedeemSuccess(true);
+    window.setTimeout(() => setRedeemSuccess(false), 3000);
+  } catch {
+    alert('Failed to redeem points.');
+  } finally {
+    setIsRedeeming(false);
+  }
+};
+
   const placeOrder = async () => {
     if (cart.length === 0) return;
     setIsPlacingOrder(true);
@@ -294,25 +409,41 @@ export default function KioskPage() {
       const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
       const costTotal = subtotal * 1.0825;
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: 'Kiosk Customer',
-          costTotal,
-          employeeID: 1,
-          items: cart.map((item) => ({
-            menuid: item.menuid,
-            quantity: item.quantity,
-            cost: item.cost,
-            iceLevel: item.iceLevel,
-            sugarLevel: item.sugarLevel,
-            topping: item.topping,
-          })),
-        }),
-      });
+const token = localStorage.getItem('auth_token');
+const response = await fetch('/api/orders', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  },
+  body: JSON.stringify({
+    customerName: kioskUser?.name ?? 'Kiosk Customer',
+    costTotal,
+    employeeID: 1,
+    userId: kioskUser?.userId ?? null,
+    items: cart.map((item) => ({
+      menuid: item.menuid,
+      quantity: item.quantity,
+      cost: item.cost,
+      iceLevel: item.iceLevel,
+      sugarLevel: item.sugarLevel,
+      topping: item.topping,
+    })),
+  }),
+});
 
       if (!response.ok) throw new Error('Failed to place order.');
+      // Refresh points after successful order
+if (kioskUser) {
+  const token = localStorage.getItem('auth_token');
+  const pointsRes = await fetch('/api/rewards', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (pointsRes.ok) {
+    const pointsData = await pointsRes.json();
+    setPoints(pointsData.points ?? 0);
+  }
+}
       setIsBrewing(true);
       window.setTimeout(() => {
         setIsBrewing(false);
@@ -419,6 +550,44 @@ export default function KioskPage() {
                   Kiosk Ordering
                 </h1>
               </div>
+              <div className="ml-auto flex items-center">
+  {kioskUser ? (
+    // Rewards bar — shown after sign-in
+    <div className="flex items-center gap-3 rounded-[20px] border border-[#dce5d8] bg-[#eef1ec] px-5 py-2.5 shadow-sm">
+      <span className="text-xl">🏆</span>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6d8a6f]">
+          {kioskUser.name.split(' ')[0]}
+        </p>
+        <p className="text-base font-extrabold text-[#2f7a5f]">
+          {points} pts
+          {points >= 50 && (
+            <button
+              onClick={handleRedeem}
+              disabled={isRedeeming}
+              className="ml-3 rounded-full bg-[#2f7a5f] px-3 py-0.5 text-xs font-bold text-white transition hover:bg-[#25614b] disabled:opacity-50"
+            >
+              {isRedeeming ? '...' : 'Redeem'}
+            </button>
+          )}
+        </p>
+        {redeemSuccess && (
+          <p className="text-xs font-bold text-[#2f7a5f]">✓ Free drink redeemed!</p>
+        )}
+      </div>
+    </div>
+  ) : (
+    // Sign in button — shown before sign-in
+    <button
+      onClick={() => window.google?.accounts.id.prompt()}
+      disabled={!googleScriptReady}
+      className="flex items-center gap-2 min-h-[44px] rounded-full border border-[#dce5d8] bg-white px-5 py-2 text-sm font-bold text-[#4a554a] shadow-sm transition hover:bg-[#f8f1e7] disabled:opacity-40 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+    >
+      <span>⭐</span>
+      Sign in for Rewards
+    </button>
+  )}
+</div>
             </div>
           </div>
 
@@ -618,6 +787,27 @@ export default function KioskPage() {
 
       <div className="hidden lg:flex lg:self-stretch">
         <CartSidebar
+          extraFields={
+  kioskUser && points >= 50 ? (
+    <div className="pb-1">
+      <button
+        onClick={handleRedeem}
+        disabled={isRedeeming}
+        className="w-full min-h-[48px] rounded-[18px] border-2 border-[#2f7a5f] bg-[#eef1ec] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+      >
+        {isRedeeming ? 'Redeeming...' : `🎉 Redeem Free Drink (${points} pts)`}
+      </button>
+      {redeemSuccess && (
+        <p className="mt-2 text-center text-xs font-bold text-[#2f7a5f]">✓ Redeemed! Enjoy 🍵</p>
+      )}
+    </div>
+  ) : kioskUser ? (
+    <div className="rounded-[14px] bg-[#f8f1e7] px-4 py-3 text-center">
+      <p className="text-xs font-bold text-[#6d8a6f]">⭐ {points} / 50 pts</p>
+      <p className="text-xs text-[#4a554a] mt-1">{50 - points} more points for a free drink</p>
+    </div>
+  ) : undefined
+}
           cart={cart}
           onAdd={addToCart}
           onRemove={removeFromCart}
@@ -653,6 +843,27 @@ export default function KioskPage() {
       )}
 
       <CartSidebar
+      extraFields={
+  kioskUser && points >= 50 ? (
+    <div className="pb-1">
+      <button
+        onClick={handleRedeem}
+        disabled={isRedeeming}
+        className="w-full min-h-[48px] rounded-[18px] border-2 border-[#2f7a5f] bg-[#eef1ec] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+      >
+        {isRedeeming ? 'Redeeming...' : `🎉 Redeem Free Drink (${points} pts)`}
+      </button>
+      {redeemSuccess && (
+        <p className="mt-2 text-center text-xs font-bold text-[#2f7a5f]">✓ Redeemed! Enjoy 🍵</p>
+      )}
+    </div>
+  ) : kioskUser ? (
+    <div className="rounded-[14px] bg-[#f8f1e7] px-4 py-3 text-center">
+      <p className="text-xs font-bold text-[#6d8a6f]">⭐ {points} / 50 pts</p>
+      <p className="text-xs text-[#4a554a] mt-1">{50 - points} more points for a free drink</p>
+    </div>
+  ) : undefined
+}
         cart={cart}
         onAdd={addToCart}
         onRemove={removeFromCart}
