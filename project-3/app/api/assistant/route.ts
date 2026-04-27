@@ -7,7 +7,7 @@ import {
   searchAssistantMenu,
   type AssistantCartItem,
 } from '@/lib/assistant-tools';
-import { AVAILABLE_TOPPINGS, formatToppings } from '@/lib/toppings';
+import { AVAILABLE_TOPPINGS, formatToppings, normalizeToppingName } from '@/lib/toppings';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,7 +141,7 @@ const functionDeclarations = [
         topping: {
           type: 'string',
           description:
-            'Requested toppings as a comma-separated string, such as "Boba, Red Bean", or None if no topping was requested.',
+            'Requested toppings as a comma-separated string, such as "Boba, Red Bean" or "Lychee Jelly, Crystal Boba", or None if no topping was requested.',
         },
       },
       required: ['itemName'],
@@ -193,7 +193,7 @@ async function callGemini(contents: unknown[]) {
             parts: [
               {
                 text:
-                  'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. When a user asks for multiple toppings, pass them to add_to_cart as one comma-separated topping string, for example "Boba, Red Bean". Be concise and friendly.',
+                  'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. Valid toppings are Boba, Red Bean, Lychee Jelly, Pudding, Crystal Boba, Mango Popping Boba, Ice Cream, and Honey Jelly. Do not offer unavailable toppings. When a user asks for multiple toppings, pass them to add_to_cart as one comma-separated topping string, for example "Boba, Red Bean". Be concise and friendly.',
               },
             ],
           },
@@ -345,9 +345,7 @@ async function runTool(call: FunctionCall) {
 async function fallbackAssistant(message: string) {
   const cartItems: AssistantCartItem[] = [];
   const normalized = message.toLowerCase();
-  const requestedToppings = formatToppings(
-    AVAILABLE_TOPPINGS.filter((topping) => normalized.includes(topping.toLowerCase()))
-  );
+  const requestedToppings = extractRequestedToppings(message);
 
   if (
     normalized.includes('recommended drink of the day') ||
@@ -397,6 +395,27 @@ async function fallbackAssistant(message: string) {
       'I can help with menu questions and cart additions. Try asking for a flavor like mango, matcha, taro, or brown sugar.',
     cartItems,
   };
+}
+
+function extractRequestedToppings(message: string) {
+  let normalizedMessage = normalizeToppingName(message);
+  const selectedToppings: string[] = [];
+
+  const toppingsBySpecificity = [...AVAILABLE_TOPPINGS].sort(
+    (first, second) => second.length - first.length
+  );
+
+  for (const topping of toppingsBySpecificity) {
+    const normalizedTopping = normalizeToppingName(topping);
+    const pattern = new RegExp(`(^|\\s)${normalizedTopping}(\\s|$)`);
+
+    if (!pattern.test(normalizedMessage)) continue;
+
+    selectedToppings.push(topping);
+    normalizedMessage = normalizedMessage.replace(pattern, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  return formatToppings(selectedToppings.reverse());
 }
 
 async function handleDirectAction(action: AssistantAction) {

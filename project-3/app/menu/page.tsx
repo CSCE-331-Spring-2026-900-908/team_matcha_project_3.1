@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { AVAILABLE_TOPPINGS, TOPPING_COSTS } from '@/lib/toppings';
 
 type MenuItem = {
   menuid: number;
@@ -22,13 +23,10 @@ const categoryConfig: {
 
 const sweetnessLevels = ['0%', '25%', '50%', '75%', '100%', '125%'];
 const iceLevels = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
-const addOnOptions = [
-  { name: 'Boba', cost: 0.5 },
-  { name: 'Pudding', cost: 0.6 },
-  { name: 'Grass Jelly', cost: 0.5 },
-  { name: 'Red Bean', cost: 0.5 },
-  { name: 'Aloe Vera', cost: 0.7 },
-];
+const addOnOptions = AVAILABLE_TOPPINGS.map((name) => ({
+  name,
+  cost: TOPPING_COSTS[name],
+}));
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,

@@ -1,7 +1,13 @@
 import { getInventoryItems } from '@/lib/inventory';
 import { getMenuItems, type MenuItem } from '@/lib/menu';
 import { MENU_EXTRAS } from '@/lib/menu-data';
-import { AVAILABLE_TOPPINGS, formatToppings, getToppingsCost, TOPPING_COSTS } from '@/lib/toppings';
+import {
+  AVAILABLE_TOPPINGS,
+  formatToppings,
+  getToppingsCost,
+  normalizeToppingName,
+  TOPPING_COSTS,
+} from '@/lib/toppings';
 import { loadWeatherSnapshot } from '@/lib/weather';
 
 export type AssistantCartItem = MenuItem & {
@@ -18,8 +24,6 @@ type MenuSearchResult = MenuItem & {
 
 const ICE_LEVELS = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
 const SUGAR_LEVELS = ['0%', '25%', '50%', '75%', '100%', '125%'];
-const TOPPING_KEYWORDS = ['tapioca', 'boba', 'red bean', 'honey'];
-
 function normalizeText(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9% ]/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -82,12 +86,28 @@ export async function getAssistantMenu() {
 export async function getAssistantToppings() {
   try {
     const inventory = await getInventoryItems();
-    const toppings = inventory
-      .filter((item) => {
-        const normalized = item.name.toLowerCase();
-        return TOPPING_KEYWORDS.some((keyword) => normalized.includes(keyword));
-      })
-      .map((item) => ({ name: item.name, cost: item.cost }));
+    const toppings = AVAILABLE_TOPPINGS.map((topping) => {
+      const normalizedTopping = normalizeToppingName(topping);
+      const inventoryItem = inventory.find((item) => {
+        const normalizedInventoryName = normalizeToppingName(item.name);
+
+        if (normalizedInventoryName === normalizedTopping) return true;
+
+        if (topping === 'Boba') {
+          return (
+            normalizedInventoryName.includes('tapioca') ||
+            normalizedInventoryName === 'boba'
+          );
+        }
+
+        return false;
+      });
+
+      return {
+        name: topping,
+        cost: inventoryItem?.cost ?? TOPPING_COSTS[topping] ?? 0,
+      };
+    });
 
     if (toppings.length > 0) return toppings;
   } catch {

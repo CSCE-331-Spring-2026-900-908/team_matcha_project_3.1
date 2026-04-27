@@ -7,7 +7,17 @@ NUM_WEEKS = 52
 START_DATE = datetime(2025, 1, 1)
 ICE_OPTIONS = ["No Ice", "Less Ice", "Regular Ice", "Extra Ice"]
 SUGAR_OPTIONS = ["0%", "25%", "50%", "75%", "100%"]
-TOPPING_OPTIONS = ["None", "Boba", "Pudding", "Grass Jelly", "Red Bean", "Aloe Vera"]
+TOPPING_COSTS = {
+    "Boba": 0.50,
+    "Red Bean": 0.50,
+    "Lychee Jelly": 0.50,
+    "Pudding": 0.50,
+    "Crystal Boba": 0.75,
+    "Mango Popping Boba": 0.75,
+    "Ice Cream": 0.75,
+    "Honey Jelly": 0.50,
+}
+TOPPING_OPTIONS = ["None", *TOPPING_COSTS.keys()]
 TARGET_REVENUE = 1_000_000
 NUM_MENU_ITEMS = 20
 NUM_EMPLOYEES = 8
@@ -32,26 +42,41 @@ inventory_names = [
     "Black Tea Leaves", "Green Tea Leaves", "Oolong Tea Leaves",
     "Milk", "Almond Milk", "Oat Milk",
     "Tapioca Pearls (Boba)", "Brown Sugar Syrup",
-    "Honey", "Simple Syrup",
+    "Honey Jelly", "Simple Syrup",
     "Taro Powder", "Matcha Powder",
     "Thai Tea Mix", "Wintermelon Syrup",
     "Passionfruit Syrup", "Lychee Syrup",
     "Peach Syrup", "Mango Syrup",
     "Strawberry Syrup", "Guava Syrup",
-    "Pineapple Syrup", "Red Bean"
+    "Pineapple Syrup", "Red Bean",
+    "Lychee Jelly", "Pudding", "Crystal Boba",
+    "Mango Popping Boba", "Ice Cream"
 ]
+
+inventory_overrides = {
+    "Honey Jelly": (0.50, 1758, 3),
+    "Lychee Jelly": (0.50, 400, 0),
+    "Pudding": (0.50, 300, 0),
+    "Crystal Boba": (0.75, 253, 0),
+    "Mango Popping Boba": (0.75, 413, 0),
+    "Ice Cream": (0.75, 222, 0),
+}
 
 NUM_INVENTORY_ITEMS = len(inventory_names)
 inventory_items = []
 
 
 for i, name in enumerate(inventory_names, start=1):
+    cost, stock, use_average = inventory_overrides.get(
+        name,
+        (round(random.uniform(0.50, 5.00), 2), random.randint(500, 2000), random.randint(1, 5))
+    )
     inventory_items.append([
         i,
         name,
-        round(random.uniform(0.50, 5.00), 2),
-        random.randint(500, 2000),
-        random.randint(1, 5)
+        cost,
+        stock,
+        use_average
     ])
 
 with open("inventory.csv", "w", newline="") as f:
@@ -120,7 +145,7 @@ ALMOND_MILK = 8
 OAT_MILK = 9
 BOBA = 10
 BROWN_SUGAR = 11
-HONEY = 12
+HONEY_JELLY = 12
 SIMPLE_SYRUP = 13
 TARO = 14
 MATCHA = 15
@@ -194,9 +219,6 @@ for menu in menu_items:
     if "Brown Sugar" in drink_name:
         ingredients.add(BROWN_SUGAR)
 
-    if "Honey" in drink_name:
-        ingredients.add(HONEY)
-
     # Add ingredients to bridge table
     for inv_id in ingredients:
         menu_item_bridge.append([
@@ -259,7 +281,7 @@ while current_date < end_date:
         for menu in selected_menu:
             quantity = random.randint(1, 2)
             topping = random.choice(TOPPING_OPTIONS)
-            topping_cost = 0.50 if topping != "None" else 0.00
+            topping_cost = TOPPING_COSTS.get(topping, 0.00)
             line_total = quantity * menu[2] + topping_cost
             order_total += line_total
 

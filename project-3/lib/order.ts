@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 
 import pool from '@/lib/db';
-import { formatToppings, parseToppings } from '@/lib/toppings';
+import { formatToppings, normalizeToppingName, parseToppings } from '@/lib/toppings';
 import { earnPoints } from './rewards';
 
 async function syncSequence(
@@ -56,12 +56,13 @@ export async function createOrder(
 
     for (const item of items) {
       const toppingString = formatToppings(item.toppings ?? item.topping);
+      const itemQuantity = getOrderedQuantity(item.quantity);
       await connection.query(
         'INSERT INTO order_items (orderid, menuid, quantity, cost, iceLevel, sugarLevel, topping) VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [
           orderId,
           item.menuid,
-          item.quantity,
+          itemQuantity,
           item.cost,
           item.iceLevel || 'Regular Ice',
           item.sugarLevel || '100%',
@@ -69,7 +70,8 @@ export async function createOrder(
         ]
       );
 
-      await decrementToppingInventory(connection, toppingString, item.quantity);
+      await decrementMenuItemInventory(connection, item.menuid, itemQuantity);
+      await decrementToppingInventory(connection, toppingString, itemQuantity);
     }
     if(userID) 
     {
@@ -86,13 +88,34 @@ export async function createOrder(
   }
 }
 
+function getOrderedQuantity(quantity: number) {
+  return Math.max(1, Math.floor(Number(quantity) || 1));
+}
+
+async function decrementMenuItemInventory(
+  connection: PoolClient,
+  menuId: number,
+  quantity: number
+) {
+  await connection.query(
+    `UPDATE inventory AS inventory_item
+     SET inventorynum = GREATEST(
+       0,
+       inventory_item.inventorynum - (menu_item.itemquantity * $2)
+     )
+     FROM menu_items AS menu_item
+     WHERE menu_item.inventoryid = inventory_item.inventoryid
+       AND menu_item.menuid = $1;`,
+    [menuId, quantity]
+  );
+}
+
 async function decrementToppingInventory(
   connection: PoolClient,
   toppingString: string,
   quantity: number
 ) {
   const toppings = parseToppings(toppingString);
-  const itemQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
 
   if (toppings.length === 0) return;
 
@@ -102,9 +125,18 @@ async function decrementToppingInventory(
   }>('SELECT inventoryid, name FROM inventory;');
 
   for (const topping of toppings) {
-    const matchingInventoryItem = inventoryResult.rows.find((item) =>
-      parseToppings(item.name).includes(topping)
-    );
+    const matchingInventoryItem = inventoryResult.rows.find((item) => {
+      const inventoryName = normalizeToppingName(item.name);
+      const toppingName = normalizeToppingName(topping);
+
+      if (inventoryName === toppingName) return true;
+
+      if (topping === 'Boba') {
+        return inventoryName.includes('tapioca') || inventoryName.includes('boba');
+      }
+
+      return inventoryName.includes(toppingName);
+    });
 
     if (!matchingInventoryItem) continue;
 
@@ -112,7 +144,7 @@ async function decrementToppingInventory(
       `UPDATE inventory
        SET inventorynum = GREATEST(0, inventorynum - $2)
        WHERE inventoryid = $1;`,
-      [matchingInventoryItem.inventoryid, itemQuantity]
+      [matchingInventoryItem.inventoryid, quantity]
     );
   }
 }
