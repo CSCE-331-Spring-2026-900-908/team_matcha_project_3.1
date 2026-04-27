@@ -22,6 +22,7 @@ type WeatherApiResponse = {
   forecast: ForecastDay[];
 };
 
+
 export default function Home() {
   const [isLoadingWeather, setIsLoadingWeather] = useState(true);
   const [weatherError, setWeatherError] = useState<string | null>(null);
