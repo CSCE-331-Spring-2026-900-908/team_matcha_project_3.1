@@ -420,6 +420,74 @@ html.text-size-x-large .manager-sidebar h2 {
   line-height: 1.2 !important;
 }
 
+/* Menu board accessibility overrides */
+html.text-size-large .menu-board-title {
+  font-size: 3.55vw !important;
+}
+
+html.text-size-x-large .menu-board-title {
+  font-size: 3.9vw !important;
+}
+
+html.text-size-large .menu-board-category-title,
+html.text-size-large .menu-board-item-name,
+html.text-size-large .menu-board-item-price {
+  font-size: 1.45vw !important;
+}
+
+html.text-size-x-large .menu-board-category-title,
+html.text-size-x-large .menu-board-item-name,
+html.text-size-x-large .menu-board-item-price {
+  font-size: 1.62vw !important;
+}
+
+html.text-size-large .menu-board-panel-title,
+html.text-size-large .menu-board-status {
+  font-size: 1.2vw !important;
+}
+
+html.text-size-x-large .menu-board-panel-title,
+html.text-size-x-large .menu-board-status {
+  font-size: 1.35vw !important;
+}
+
+html.text-size-large .menu-board-panel-copy,
+html.text-size-large .menu-board-price-label,
+html.text-size-large .menu-board-index,
+html.text-size-large .menu-board-eyebrow {
+  font-size: 1vw !important;
+  line-height: 1.45 !important;
+}
+
+html.text-size-x-large .menu-board-panel-copy,
+html.text-size-x-large .menu-board-price-label,
+html.text-size-x-large .menu-board-index,
+html.text-size-x-large .menu-board-eyebrow {
+  font-size: 1.14vw !important;
+  line-height: 1.5 !important;
+}
+
+html.contrast-dark .menu-board {
+  background: #08131f !important;
+  color: #f8fafc !important;
+  border-color: #d9e4f4 !important;
+}
+
+html.contrast-dark .menu-board header,
+html.contrast-dark .menu-board footer {
+  background: #102033 !important;
+  border-color: #d9e4f4 !important;
+}
+
+html.contrast-dark .menu-board h1,
+html.contrast-dark .menu-board h2,
+html.contrast-dark .menu-board h3,
+html.contrast-dark .menu-board p,
+html.contrast-dark .menu-board span,
+html.contrast-dark .menu-board li {
+  color: #f8fafc !important;
+}
+
 /* ============================================================
    CONTRAST MODE
    ============================================================ */
