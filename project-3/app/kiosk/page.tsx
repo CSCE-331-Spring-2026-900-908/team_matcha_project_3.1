@@ -636,7 +636,7 @@ if (kioskUser) {
   ) : (
     // Sign in button — shown before sign-in
     <button
-      onClick={() => window.google?.accounts.id.prompt()}
+      onClick={() => (window as Window & { google?: { accounts?: GoogleAccountsApi } }).google?.accounts?.id.prompt()}
       disabled={!googleScriptReady}
       className="flex items-center gap-2 min-h-[44px] rounded-full border border-[#dce5d8] bg-white px-5 py-2 text-sm font-bold text-[#4a554a] shadow-sm transition hover:bg-[#f8f1e7] disabled:opacity-40 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
     >
