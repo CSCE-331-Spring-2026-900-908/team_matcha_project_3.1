@@ -23,6 +23,7 @@ const DEFAULT_TOPPING = 'None';
 const TOPPING_COSTS: Record<string, number> = {
   None: 0,
   Boba: 0.5,
+  Honey: 0.5,
   'Red Bean': 0.5,
 };
 const TOPPINGS = Object.keys(TOPPING_COSTS);
