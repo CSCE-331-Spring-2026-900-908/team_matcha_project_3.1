@@ -27,8 +27,8 @@ type Props = {
 };
 
 const quickPrompts = [
-  { label: 'Popular drinks', message: 'What is popular?', action: 'popular' },
-  { label: "Today's Recommendation", message: 'Add today weather pick', action: 'weather-recommendation' },
+  { label: 'Popular drinks', message: 'What drinks are popular?', action: 'popular' },
+  { label: "Today's Recommendation", message: 'Add today\'s drink recommendation.', action: 'weather-recommendation' },
   { label: 'Available toppings', message: 'What toppings do you have?', action: 'toppings' },
 ];
 
@@ -281,14 +281,26 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="group flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#6d4a13] bg-[#d9a441] text-[#1f2520] shadow-[0_14px_34px_rgba(109,74,19,0.28)] transition-colors hover:bg-[#e5b95b] focus:outline-none focus:ring-4 focus:ring-[#d9a441]/35"
+        className="group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[#6d4a13] bg-[linear-gradient(135deg,#9a6718_0%,#f4cf72_28%,#c78f28_52%,#ffe19a_72%,#9f6815_100%)] text-[#1f2520] shadow-[0_14px_34px_rgba(109,74,19,0.28)] transition-colors before:absolute before:inset-y-[-35%] before:left-[-100%] before:w-16 before:rotate-12 before:bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.95)_48%,transparent_100%)] before:blur-[2px] before:content-[''] hover:before:animate-[assistant-sheen_760ms_ease-out_forwards] focus:outline-none focus:ring-4 focus:ring-[#d9a441]/35"
         aria-label={isOpen ? 'Close assistant' : 'Open assistant'}
       >
-        <ChatIcon />
+        <span className="relative z-10">
+          <ChatIcon />
+        </span>
         <span className="pointer-events-none absolute bottom-full left-0 mb-3 hidden whitespace-nowrap rounded-full bg-[#1f2520] px-4 py-2 text-xs font-bold text-white shadow-lg group-hover:block">
           Ask Assistant
         </span>
       </button>
+      <style jsx>{`
+        @keyframes assistant-sheen {
+          from {
+            transform: translateX(0) rotate(12deg);
+          }
+          to {
+            transform: translateX(220px) rotate(12deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }
