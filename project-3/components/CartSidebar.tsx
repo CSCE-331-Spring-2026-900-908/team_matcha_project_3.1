@@ -98,18 +98,29 @@ const total = discounted + tax;
                   </div>
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h4 className="font-bold leading-tight text-[#1f2520]">{item.name}</h4>
-                        <p className="mt-2 text-sm text-[#4a554a]">
-                          {[
-                            item.iceLevel ?? null,
-                            item.sugarLevel ?? null,
-                            item.topping && item.topping !== 'None' ? item.topping : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' • ') || 'Standard build'}
-                        </p>
-                      </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold leading-tight text-[#1f2520]">{item.name}</h4>
+                      {item.temperature && (
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${
+                          item.temperature === 'Hot'
+                            ? 'bg-[#fdf0e8] text-[#c2622a]'
+                            : 'bg-[#e8f4f0] text-[#2f7a5f]'
+                        }`}>
+                          {item.temperature === 'Hot' ? '☕ Hot' : '🧊 Cold'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-sm text-[#4a554a]">
+                      {[
+                        item.iceLevel ?? null,
+                        item.sugarLevel ?? null,
+                        item.topping && item.topping !== 'None' ? item.topping : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' • ') || 'Standard build'}
+                    </p>
+                  </div>
                       <p className="rounded-full bg-[#eef1ec] px-3 py-1 text-sm font-bold text-[#2f7a5f]">
                         {currencyFormatter.format(item.cost * item.quantity)}
                       </p>
