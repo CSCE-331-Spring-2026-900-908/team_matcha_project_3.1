@@ -61,7 +61,7 @@ export default function CustomizationModal({
 
   if (presentation === 'fullscreen') {
     return (
-      <div className="fixed inset-0 z-50 matcha-surface animate-fade-in text-[#1f2520]">
+      <div className="fixed inset-0 z-50 matcha-surface animate-fade-in text-[#1f2520]" role="dialog" aria-modal="true" aria-labelledby="customization-title-fullscreen" aria-describedby="customization-summary-fullscreen">
         <div className="flex h-full flex-col animate-fade-in-up xl:flex-row">
           <div className="relative bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)] xl:basis-2/5 xl:shrink-0">
             <div className="relative h-64 w-full sm:h-72 lg:h-80 xl:h-full">
@@ -82,7 +82,7 @@ export default function CustomizationModal({
                 Drink Summary
               </p>
               <h3 className="mt-2 text-2xl font-bold text-[#1f2520]">{item.name}</h3>
-              <p className="mt-2 text-sm leading-6 text-[#4a554a]">
+              <p id="customization-summary-fullscreen" className="mt-2 text-sm leading-6 text-[#4a554a]">
                 Choose the sweetness, ice, and topping combination that fits the guest and the drink.
               </p>
             </div>
@@ -111,7 +111,7 @@ export default function CustomizationModal({
                   <p className="text-base font-bold uppercase tracking-[0.3em] text-[#4a554a]">
                     Customize Your Drink
                   </p>
-                  <h2 className="mt-4 text-4xl font-bold text-[#1f2520] sm:text-5xl lg:text-6xl">
+                  <h2 id="customization-title-fullscreen" className="mt-4 text-4xl font-bold text-[#1f2520] sm:text-5xl lg:text-6xl">
                     {item.name}
                   </h2>
                   <div className="mt-5 flex flex-wrap items-center gap-4">
@@ -131,14 +131,15 @@ export default function CustomizationModal({
 
                 <div className="mt-10 space-y-8">
                   <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
+                    <h3 id="ice-level-heading-fullscreen" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
                       Ice Level
                     </h3>
-                    <div className="mt-6 flex flex-wrap gap-4">
+                    <div className="mt-6 flex flex-wrap gap-4" role="group" aria-labelledby="ice-level-heading-fullscreen">
                       {ICE_LEVELS.map((level) => (
                         <button
                           key={level}
                           onClick={() => setIceLevel(level)}
+                          aria-pressed={iceLevel === level}
                           className={`min-h-[56px] rounded-full px-8 py-3 text-lg font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
                             iceLevel === level
                               ? 'bg-[#2f7a5f] text-white shadow-xl'
@@ -152,14 +153,15 @@ export default function CustomizationModal({
                   </section>
 
                   <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
+                    <h3 id="sugar-level-heading-fullscreen" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
                       Sugar Level
                     </h3>
-                    <div className="mt-6 flex flex-wrap gap-4">
+                    <div className="mt-6 flex flex-wrap gap-4" role="group" aria-labelledby="sugar-level-heading-fullscreen">
                       {SUGAR_LEVELS.map((level) => (
                         <button
                           key={level}
                           onClick={() => setSugarLevel(level)}
+                          aria-pressed={sugarLevel === level}
                           className={`min-h-[56px] rounded-full px-8 py-3 text-lg font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
                             sugarLevel === level
                               ? 'bg-[#2f7a5f] text-white shadow-xl'
@@ -173,14 +175,15 @@ export default function CustomizationModal({
                   </section>
 
                   <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
+                    <h3 id="toppings-heading-fullscreen" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">
                       Toppings
                     </h3>
-                    <div className="mt-6 flex flex-wrap gap-4">
+                    <div className="mt-6 flex flex-wrap gap-4" role="group" aria-labelledby="toppings-heading-fullscreen">
                       {TOPPINGS.map((t_name) => (
                         <button
                           key={t_name}
                           onClick={() => setTopping(t_name)}
+                          aria-pressed={topping === t_name}
                           className={`min-h-[56px] rounded-full px-8 py-3 text-lg font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
                             topping === t_name
                               ? 'bg-[#2f7a5f] text-white shadow-xl'
@@ -226,7 +229,7 @@ export default function CustomizationModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="customization-title-dialog" aria-describedby="customization-price-dialog">
       <div className="w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
         <header className="relative h-56 w-full bg-[#f8f1e7]">
           {item.image_url ? (
@@ -246,9 +249,9 @@ export default function CustomizationModal({
         </header>
 
         <main className="p-8">
-          <h2 className="text-3xl font-bold text-[#1f2520]">{item.name}</h2>
+          <h2 id="customization-title-dialog" className="text-3xl font-bold text-[#1f2520]">{item.name}</h2>
           <div className="flex items-center gap-3 mt-2">
-            <p className="text-2xl font-bold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
+            <p id="customization-price-dialog" className="text-2xl font-bold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
             {toppingCost > 0 && (
               <span className="text-sm font-bold text-[#4a554a] bg-[#f8f1e7] px-3 py-1 rounded-full border border-[#eadfce]">
                 Includes {currencyFormatter.format(toppingCost)} add-on
@@ -259,12 +262,13 @@ export default function CustomizationModal({
           <div className="mt-8 space-y-8 max-h-[50vh] overflow-y-auto pr-2">
             {/* Ice Level */}
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Ice Level</h3>
-              <div className="mt-3 flex flex-wrap gap-3">
+              <h3 id="ice-level-heading-dialog" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Ice Level</h3>
+              <div className="mt-3 flex flex-wrap gap-3" role="group" aria-labelledby="ice-level-heading-dialog">
                 {ICE_LEVELS.map((level) => (
                   <button
                     key={level}
                     onClick={() => setIceLevel(level)}
+                    aria-pressed={iceLevel === level}
                     className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
                       iceLevel === level
                         ? 'bg-[#2f7a5f] text-white shadow-md'
@@ -279,12 +283,13 @@ export default function CustomizationModal({
 
             {/* Sugar Level */}
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Sugar Level</h3>
-              <div className="mt-3 flex flex-wrap gap-3">
+              <h3 id="sugar-level-heading-dialog" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Sugar Level</h3>
+              <div className="mt-3 flex flex-wrap gap-3" role="group" aria-labelledby="sugar-level-heading-dialog">
                 {SUGAR_LEVELS.map((level) => (
                   <button
                     key={level}
                     onClick={() => setSugarLevel(level)}
+                    aria-pressed={sugarLevel === level}
                     className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
                       sugarLevel === level
                         ? 'bg-[#2f7a5f] text-white shadow-md'
@@ -299,12 +304,13 @@ export default function CustomizationModal({
 
             {/* Toppings */}
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Toppings</h3>
-              <div className="mt-3 flex flex-wrap gap-3">
+              <h3 id="toppings-heading-dialog" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Toppings</h3>
+              <div className="mt-3 flex flex-wrap gap-3" role="group" aria-labelledby="toppings-heading-dialog">
                 {TOPPINGS.map((t_name) => (
                   <button
                     key={t_name}
                     onClick={() => setTopping(t_name)}
+                    aria-pressed={topping === t_name}
                     className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
                       topping === t_name
                         ? 'bg-[#2f7a5f] text-white shadow-md'

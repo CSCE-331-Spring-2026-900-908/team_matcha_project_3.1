@@ -41,7 +41,7 @@ function initializeGoogleTranslate() {
   new window.google.translate.TranslateElement(
     {
       pageLanguage: 'en',
-      includedLanguages: 'es',
+      includedLanguages: 'es,fr,de,ko,ja',
       autoDisplay: false,
       layout: window.google.translate.TranslateElement.InlineLayout?.SIMPLE,
     },
