@@ -136,9 +136,6 @@ const total = discounted + tax;
                         <span className="w-8 text-center text-base font-bold text-[#1f2520]" aria-live="polite">{item.quantity}</span>
                         <button
                           onClick={(e) => {
-                            console.log('[CartSidebar +] Button clicked, event:', e);
-                            console.log('[CartSidebar +] Button element:', e.currentTarget);
-                            console.log('[CartSidebar +] Calling onAdd with item:', item);
                             e.preventDefault();
                             e.stopPropagation();
                             onAdd(item);

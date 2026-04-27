@@ -19,12 +19,14 @@ type EmployeeForm = {
   name: string;
   pay: string;
   email: string;
+  role: 'employee' | 'manager';
 };
 
 const emptyForm: EmployeeForm = {
   name: '',
   pay: '',
   email: '',
+  role: 'employee',
 };
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -91,6 +93,7 @@ export default function EmployeesPage() {
       name: employee.name,
       pay: String(employee.pay),
       email: employee.account_email ?? '',
+      role: employee.account_role ?? 'employee',
     });
     setError(null);
     setNotice(null);
@@ -107,8 +110,9 @@ export default function EmployeesPage() {
     const name = form.name.trim();
     const pay = Number(form.pay);
     const email = form.email.trim().toLowerCase();
+    const role = form.role;
 
-    if (!name || !email || !Number.isFinite(pay) || pay < 0) {
+    if (!name || !email || !role || !Number.isFinite(pay) || pay < 0) {
       return null;
     }
 
@@ -116,7 +120,7 @@ export default function EmployeesPage() {
       name,
       pay,
       email,
-      role: editingEmployee?.account_role ?? 'employee',
+      role,
     };
   }
 
@@ -126,7 +130,7 @@ export default function EmployeesPage() {
     const input = validateForm();
 
     if (!input) {
-      setError('Enter a name, pay, and email.');
+      setError('Enter a name, pay, email, and access level.');
       setNotice(null);
       return;
     }
@@ -303,7 +307,7 @@ export default function EmployeesPage() {
                           {employee.name}
                         </div>
                         <div className="text-xs text-[#8a6240]">
-                          #{employee.employeeid} • {employee.job}
+                          #{employee.employeeid}
                         </div>
                       </td>
                       <td className="px-8 py-5">
@@ -407,6 +411,24 @@ export default function EmployeesPage() {
                     step="0.01"
                     required
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-[#8a6240] mb-1">
+                    Access
+                  </label>
+                  <select
+                    value={form.role}
+                    onChange={(e) =>
+                      updateForm(
+                        'role',
+                        e.target.value as EmployeeForm['role']
+                      )
+                    }
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f] bg-white"
+                  >
+                    <option value="employee">Employee View</option>
+                    <option value="manager">Manager View</option>
+                  </select>
                 </div>
                 {editingEmployee ? (
                   <div className="rounded-xl bg-[#f8f1e7] px-4 py-3 text-sm text-[#6f5848]">
