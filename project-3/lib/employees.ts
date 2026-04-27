@@ -1,5 +1,4 @@
 import pool from '@/lib/db';
-import { createUser } from '@/lib/users';
 
 export type Employee = {
   employeeid: number;
@@ -18,6 +17,13 @@ export type EmployeeInput = {
   pay: number;
   email: string;
   role: 'employee' | 'manager';
+};
+
+type LinkedUser = {
+  userid: number;
+  email: string;
+  role: 'employee' | 'manager' | 'customer';
+  google_id: string | null;
 };
 
 function mapEmployee(row: {
@@ -55,6 +61,30 @@ function normalizeEmployeeWriteError(error: unknown): Error {
   }
 
   return error instanceof Error ? error : new Error('Employee write failed.');
+}
+
+async function createLinkedUser(
+  client: Awaited<ReturnType<typeof pool.connect>>,
+  input: {
+    name: string;
+    email: string;
+    role: 'employee' | 'manager';
+    employee_id: number;
+  }
+): Promise<LinkedUser> {
+  const result = await client.query(
+    `INSERT INTO app_users (google_id, email, name, role, employee_id)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, email, role, google_id`,
+    [null, input.email, input.name, input.role, input.employee_id]
+  );
+
+  return {
+    userid: result.rows[0].id,
+    email: result.rows[0].email,
+    role: result.rows[0].role,
+    google_id: result.rows[0].google_id,
+  };
 }
 
 export async function getEmployees(): Promise<Employee[]> {
@@ -96,14 +126,14 @@ export async function createEmployee(input: EmployeeInput): Promise<Employee> {
 
     const employee = employeeResult.rows[0];
 
-    const user = await createUser(
+    const user = await createLinkedUser(
+      client,
       {
         name: input.name,
         email: input.email,
         role: input.role,
         employee_id: employee.employeeid,
-      },
-      client
+      }
     );
 
     await client.query('COMMIT');
