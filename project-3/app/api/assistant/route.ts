@@ -7,6 +7,7 @@ import {
   searchAssistantMenu,
   type AssistantCartItem,
 } from '@/lib/assistant-tools';
+import { AVAILABLE_TOPPINGS, formatToppings } from '@/lib/toppings';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,7 +140,8 @@ const functionDeclarations = [
         },
         topping: {
           type: 'string',
-          description: 'Requested topping, or None if no topping was requested.',
+          description:
+            'Requested toppings as a comma-separated string, such as "Boba, Red Bean", or None if no topping was requested.',
         },
       },
       required: ['itemName'],
@@ -191,7 +193,7 @@ async function callGemini(contents: unknown[]) {
             parts: [
               {
                 text:
-                  'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. Be concise and friendly.',
+                  'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. When a user asks for multiple toppings, pass them to add_to_cart as one comma-separated topping string, for example "Boba, Red Bean". Be concise and friendly.',
               },
             ],
           },
@@ -343,6 +345,9 @@ async function runTool(call: FunctionCall) {
 async function fallbackAssistant(message: string) {
   const cartItems: AssistantCartItem[] = [];
   const normalized = message.toLowerCase();
+  const requestedToppings = formatToppings(
+    AVAILABLE_TOPPINGS.filter((topping) => normalized.includes(topping.toLowerCase()))
+  );
 
   if (
     normalized.includes('recommended drink of the day') ||
@@ -362,7 +367,10 @@ async function fallbackAssistant(message: string) {
     const requestedItem = menu.find((item) => normalized.includes(item.name.toLowerCase()));
 
     if (requestedItem) {
-      const result = await createAssistantCartItems({ itemName: requestedItem.name });
+      const result = await createAssistantCartItems({
+        itemName: requestedItem.name,
+        topping: requestedToppings,
+      });
       cartItems.push(...result.cartItems);
 
       return {

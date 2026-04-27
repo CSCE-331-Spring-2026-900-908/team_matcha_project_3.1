@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg';
 
 import pool from '@/lib/db';
+import { formatToppings, parseToppings } from '@/lib/toppings';
 import { earnPoints } from './rewards';
 
 async function syncSequence(
@@ -28,6 +29,7 @@ export async function createOrder(
     cost: number;
     iceLevel?: string;
     sugarLevel?: string;
+    topping?: string;
     toppings?: string[];
   }[],
   userID?: number
@@ -46,6 +48,7 @@ export async function createOrder(
     await syncSequence(connection, 'order_items', 'id');
 
     for (const item of items) {
+      const toppingString = formatToppings(item.toppings ?? item.topping);
       await connection.query(
         'INSERT INTO order_items (orderid, menuid, quantity, cost, iceLevel, sugarLevel, topping) VALUES ($1, $2, $3, $4, $5, $6, $7)',
         [
@@ -55,9 +58,11 @@ export async function createOrder(
           item.cost,
           item.iceLevel || 'Regular Ice',
           item.sugarLevel || '100%',
-          item.toppings?.join(', ') || 'None',
+          toppingString,
         ]
       );
+
+      await decrementToppingInventory(connection, toppingString, item.quantity);
     }
     if(userID) 
     {
@@ -71,5 +76,36 @@ export async function createOrder(
     throw e;
   } finally {
     connection.release();
+  }
+}
+
+async function decrementToppingInventory(
+  connection: PoolClient,
+  toppingString: string,
+  quantity: number
+) {
+  const toppings = parseToppings(toppingString);
+  const itemQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
+
+  if (toppings.length === 0) return;
+
+  const inventoryResult = await connection.query<{
+    inventoryid: number;
+    name: string;
+  }>('SELECT inventoryid, name FROM inventory;');
+
+  for (const topping of toppings) {
+    const matchingInventoryItem = inventoryResult.rows.find((item) =>
+      parseToppings(item.name).includes(topping)
+    );
+
+    if (!matchingInventoryItem) continue;
+
+    await connection.query(
+      `UPDATE inventory
+       SET inventorynum = GREATEST(0, inventorynum - $2)
+       WHERE inventoryid = $1;`,
+      [matchingInventoryItem.inventoryid, itemQuantity]
+    );
   }
 }

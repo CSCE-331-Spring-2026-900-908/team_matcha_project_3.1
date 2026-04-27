@@ -1,6 +1,7 @@
 import { getInventoryItems } from '@/lib/inventory';
 import { getMenuItems, type MenuItem } from '@/lib/menu';
 import { MENU_EXTRAS } from '@/lib/menu-data';
+import { AVAILABLE_TOPPINGS, formatToppings, getToppingsCost, TOPPING_COSTS } from '@/lib/toppings';
 import { loadWeatherSnapshot } from '@/lib/weather';
 
 export type AssistantCartItem = MenuItem & {
@@ -94,10 +95,7 @@ export async function getAssistantToppings() {
   }
 
   return [
-    { name: 'Tapioca Pearls', cost: 0 },
-    { name: 'Boba', cost: 0 },
-    { name: 'Red Bean', cost: 0 },
-    { name: 'Honey Boba', cost: 0 },
+    ...AVAILABLE_TOPPINGS.map((name) => ({ name, cost: TOPPING_COSTS[name] ?? 0 })),
   ];
 }
 
@@ -124,15 +122,16 @@ export async function createAssistantCartItems(input: {
   }
 
   const quantity = Math.max(1, Math.min(8, Math.floor(Number(input.quantity) || 1)));
+  const topping = formatToppings(input.topping);
   const cartItem: AssistantCartItem = {
     menuid: matchedItem.menuid,
     name: matchedItem.name,
-    cost: matchedItem.cost,
+    cost: matchedItem.cost + getToppingsCost(topping),
     image_url: matchedItem.image_url,
     quantity,
     iceLevel: pickClosest(input.iceLevel, ICE_LEVELS, 'Regular Ice'),
     sugarLevel: pickClosest(input.sugarLevel, SUGAR_LEVELS, '100%'),
-    topping: input.topping?.trim() || 'None',
+    topping,
   };
 
   return {

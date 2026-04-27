@@ -2,6 +2,14 @@
 
 import { useState } from 'react';
 import { MenuItem, CartItem, currencyFormatter } from './pos-types';
+import {
+  AVAILABLE_TOPPINGS,
+  formatToppings,
+  getToppingsCost,
+  NO_TOPPING,
+  TOPPING_COSTS,
+  parseToppings,
+} from '@/lib/toppings';
 
 type Props = {
   item: MenuItem;
@@ -19,14 +27,6 @@ const ICE_LEVELS = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
 const SUGAR_LEVELS = ['0%', '25%', '50%', '75%', '100%', '125%'];
 const DEFAULT_ICE_LEVEL = 'Regular Ice';
 const DEFAULT_SUGAR_LEVEL = '100%';
-const DEFAULT_TOPPING = 'None';
-const TOPPING_COSTS: Record<string, number> = {
-  None: 0,
-  Boba: 0.5,
-  Honey: 0.5,
-  'Red Bean': 0.5,
-};
-const TOPPINGS = Object.keys(TOPPING_COSTS);
 
 export default function CustomizationModal({
   item,
@@ -41,14 +41,19 @@ export default function CustomizationModal({
 }: Props) {
   const [iceLevel, setIceLevel] = useState(initialIceLevel ?? DEFAULT_ICE_LEVEL);
   const [sugarLevel, setSugarLevel] = useState(initialSugarLevel ?? DEFAULT_SUGAR_LEVEL);
-  const [topping, setTopping] = useState(
-    initialTopping && initialTopping in TOPPING_COSTS
-      ? initialTopping
-      : DEFAULT_TOPPING
-  );
+  const [selectedToppings, setSelectedToppings] = useState(() => parseToppings(initialTopping));
 
-  const toppingCost = TOPPING_COSTS[topping] || 0;
+  const topping = formatToppings(selectedToppings);
+  const toppingCost = getToppingsCost(selectedToppings);
   const totalCost = item.cost + toppingCost;
+
+  const toggleTopping = (toppingName: string) => {
+    setSelectedToppings((current) =>
+      current.includes(toppingName)
+        ? current.filter((selected) => selected !== toppingName)
+        : [...current, toppingName]
+    );
+  };
 
   const handleConfirm = () => {
     onConfirm({
@@ -183,13 +188,24 @@ export default function CustomizationModal({
                       Toppings
                     </h3>
                     <div className="mt-6 flex flex-wrap gap-4" role="group" aria-labelledby="toppings-heading-fullscreen">
-                      {TOPPINGS.map((t_name) => (
+                      <button
+                        onClick={() => setSelectedToppings([])}
+                        aria-pressed={selectedToppings.length === 0}
+                        className={`min-h-[56px] rounded-full px-8 py-3 text-lg font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
+                          selectedToppings.length === 0
+                            ? 'bg-[#2f7a5f] text-white shadow-xl'
+                            : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
+                        }`}
+                      >
+                        {NO_TOPPING}
+                      </button>
+                      {AVAILABLE_TOPPINGS.map((t_name) => (
                         <button
                           key={t_name}
-                          onClick={() => setTopping(t_name)}
-                          aria-pressed={topping === t_name}
+                          onClick={() => toggleTopping(t_name)}
+                          aria-pressed={selectedToppings.includes(t_name)}
                           className={`min-h-[56px] rounded-full px-8 py-3 text-lg font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
-                            topping === t_name
+                            selectedToppings.includes(t_name)
                               ? 'bg-[#2f7a5f] text-white shadow-xl'
                               : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                           }`}
@@ -327,13 +343,24 @@ export default function CustomizationModal({
             <div>
               <h3 id="toppings-heading-dialog" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Toppings</h3>
               <div className="mt-3 flex flex-wrap gap-3" role="group" aria-labelledby="toppings-heading-dialog">
-                {TOPPINGS.map((t_name) => (
+                <button
+                  onClick={() => setSelectedToppings([])}
+                  aria-pressed={selectedToppings.length === 0}
+                  className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
+                    selectedToppings.length === 0
+                      ? 'bg-[#2f7a5f] text-white shadow-md'
+                      : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
+                  }`}
+                >
+                  {NO_TOPPING}
+                </button>
+                {AVAILABLE_TOPPINGS.map((t_name) => (
                   <button
                     key={t_name}
-                    onClick={() => setTopping(t_name)}
-                    aria-pressed={topping === t_name}
+                    onClick={() => toggleTopping(t_name)}
+                    aria-pressed={selectedToppings.includes(t_name)}
                     className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
-                      topping === t_name
+                      selectedToppings.includes(t_name)
                         ? 'bg-[#2f7a5f] text-white shadow-md'
                         : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                     }`}
