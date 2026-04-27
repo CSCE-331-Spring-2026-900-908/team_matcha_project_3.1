@@ -9,18 +9,22 @@ type Employee = {
   pay: number;
   job: string;
   ordernum: number;
+  account_user_id: number | null;
+  account_email: string | null;
+  account_role: 'employee' | 'manager' | null;
+  has_google_login: boolean;
 };
 
 type EmployeeForm = {
   name: string;
   pay: string;
-  job: string;
+  email: string;
 };
 
 const emptyForm: EmployeeForm = {
   name: '',
   pay: '',
-  job: '',
+  email: '',
 };
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -32,6 +36,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,27 +90,34 @@ export default function EmployeesPage() {
     setForm({
       name: employee.name,
       pay: String(employee.pay),
-      job: employee.job,
+      email: employee.account_email ?? '',
     });
     setError(null);
     setNotice(null);
+    setIsModalOpen(true);
   }
 
   function resetForm() {
     setEditingEmployee(null);
     setForm(emptyForm);
+    setIsModalOpen(false);
   }
 
   function validateForm() {
     const name = form.name.trim();
-    const job = form.job.trim();
     const pay = Number(form.pay);
+    const email = form.email.trim().toLowerCase();
 
-    if (!name || !job || !Number.isFinite(pay) || pay < 0) {
+    if (!name || !email || !Number.isFinite(pay) || pay < 0) {
       return null;
     }
 
-    return { name, job, pay };
+    return {
+      name,
+      pay,
+      email,
+      role: editingEmployee?.account_role ?? 'employee',
+    };
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -114,7 +126,7 @@ export default function EmployeesPage() {
     const input = validateForm();
 
     if (!input) {
-      setError('Enter a name, job, and non-negative pay value.');
+      setError('Enter a name, pay, and email.');
       setNotice(null);
       return;
     }
@@ -172,6 +184,14 @@ export default function EmployeesPage() {
     }
   }
 
+  function startCreate() {
+    setEditingEmployee(null);
+    setForm(emptyForm);
+    setError(null);
+    setNotice(null);
+    setIsModalOpen(true);
+  }
+
   async function handleDelete(employee: Employee) {
     const confirmed = window.confirm(`Delete ${employee.name}?`);
 
@@ -218,193 +238,207 @@ export default function EmployeesPage() {
   }
 
   return (
-    <section className="rounded-[32px] border border-[#cfd9ca] bg-[#f7faf5] p-6 shadow-[0_18px_50px_rgba(31,37,32,0.06)] sm:p-8">
-      <div className="flex flex-col gap-6">
-        <div className="border-b border-[#dbe4d6] pb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#667463]">
-            Employees
-          </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#223020] sm:text-4xl">
-            Employee management
-          </h2>
+    <section className="space-y-8 animate-in fade-in duration-500">
+      {notice && <p className="text-green-600 font-bold">{notice}</p>}
+      {error && <p className="text-red-600 font-bold">{error}</p>}
+
+      <div className="bg-white rounded-[32px] shadow-xl border border-[#eadfce] overflow-hidden">
+        <div className="p-8 border-b border-[#f0e6d8] flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-[#2f241d]">Current Employees</h2>
+            <p className="text-sm text-[#8a6240] mt-1">
+              Edit from the table without jumping to a top form.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-[#8a6240] bg-[#f8f1e7] px-4 py-1 rounded-full">
+              {employees.length} Employees
+            </span>
+            <button
+              type="button"
+              onClick={startCreate}
+              className="px-6 py-3 bg-[#2f7a5f] text-white rounded-xl font-bold hover:bg-[#25614b] transition-all"
+            >
+              Add Employee
+            </button>
+          </div>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="grid gap-4 rounded-[28px] border border-[#d9e3d5] bg-white p-5 lg:grid-cols-[1fr_0.7fr_1fr_auto]"
-        >
-          <label className="flex flex-col gap-2 text-sm font-semibold text-[#556253]">
-            Name
-            <input
-              value={form.name}
-              onChange={(event) => updateForm('name', event.target.value)}
-              className="rounded-[12px] border border-[#cfd9ca] px-4 py-3 text-base font-medium text-[#223020] outline-none focus:border-[#6a8e67] focus:ring-4 focus:ring-[#dbe7d7]"
-              placeholder="Employee name"
-            />
-          </label>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-[#fcf8f2] text-[#8a6240] text-xs font-black uppercase tracking-widest">
+              <tr>
+                <th className="px-8 py-4">Employee</th>
+                <th className="px-8 py-4">Login</th>
+                <th className="px-8 py-4">Pay</th>
+                <th className="px-8 py-4">Orders</th>
+                <th className="px-8 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#f0e6d8]">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-[#6f5848]">
+                    Loading employees...
+                  </td>
+                </tr>
+              ) : null}
 
-          <label className="flex flex-col gap-2 text-sm font-semibold text-[#556253]">
-            Pay
-            <input
-              value={form.pay}
-              onChange={(event) => updateForm('pay', event.target.value)}
-              className="rounded-[12px] border border-[#cfd9ca] px-4 py-3 text-base font-medium text-[#223020] outline-none focus:border-[#6a8e67] focus:ring-4 focus:ring-[#dbe7d7]"
-              min="0"
-              placeholder="0.00"
-              step="0.01"
-              type="number"
-            />
-          </label>
+              {!isLoading && employees.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-[#6f5848]">
+                    No employees found.
+                  </td>
+                </tr>
+              ) : null}
 
-          <label className="flex flex-col gap-2 text-sm font-semibold text-[#556253]">
-            Job
-            <input
-              value={form.job}
-              onChange={(event) => updateForm('job', event.target.value)}
-              className="rounded-[12px] border border-[#cfd9ca] px-4 py-3 text-base font-medium text-[#223020] outline-none focus:border-[#6a8e67] focus:ring-4 focus:ring-[#dbe7d7]"
-              placeholder="Role"
-            />
-          </label>
+              {!isLoading
+                ? employees.map((employee) => (
+                    <tr
+                      key={employee.employeeid}
+                      className="hover:bg-[#fdfaf6] transition-colors"
+                    >
+                      <td className="px-8 py-5">
+                        <div className="font-bold text-[#2f241d]">
+                          {employee.name}
+                        </div>
+                        <div className="text-xs text-[#8a6240]">
+                          #{employee.employeeid} • {employee.job}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="text-sm text-[#2f241d]">
+                          {employee.account_email ?? 'No linked login'}
+                        </div>
+                        <div className="text-xs text-[#8a6240]">
+                          {employee.has_google_login
+                            ? 'Google account attached'
+                            : 'Waiting for first sign-in'}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-sm text-[#6f5848]">
+                        {currencyFormatter.format(employee.pay)}
+                      </td>
+                      <td className="px-8 py-5 text-sm text-[#6f5848]">
+                        {employee.ordernum}
+                      </td>
+                      <td className="px-8 py-5 text-right space-x-2">
+                        <button
+                          onClick={() => startEdit(employee)}
+                          className="p-2 text-[#2f7a5f] hover:bg-[#ecf4f0] rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(employee)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          <div className="flex flex-col justify-end gap-2 sm:flex-row lg:flex-col">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-[12px] border border-[#5f855c] bg-[#6a8e67] px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white transition hover:bg-[#597b56] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSaving
-                ? 'Saving'
-                : editingEmployee
-                  ? 'Update'
-                  : 'Add'}
-            </button>
-            {editingEmployee ? (
+      {isModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-3xl bg-white rounded-[32px] p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#2f241d]">
+                {editingEmployee ? 'Edit Employee' : 'Create New Employee'}
+              </h2>
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-[12px] border border-[#cfd9ca] bg-[#f7faf5] px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[#556253] transition hover:bg-[#eef5eb]"
+                className="text-[#8a6240] hover:text-[#2f241d]"
               >
-                Cancel
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
               </button>
-            ) : null}
-          </div>
-        </form>
-
-        {editingEmployee ? (
-          <p className="text-sm font-medium text-[#556253]">
-            Editing employee #{editingEmployee.employeeid}. Order count{' '}
-            {editingEmployee.ordernum} stays read-only.
-          </p>
-        ) : null}
-
-        {error ? (
-          <div className="rounded-[18px] border border-[#e7b8b2] bg-[#fff1ef] px-5 py-4 text-sm font-semibold text-[#97463c]">
-            {error}
-          </div>
-        ) : null}
-
-        {notice ? (
-          <div className="rounded-[18px] border border-[#cfe3cc] bg-[#eef8ec] px-5 py-4 text-sm font-semibold text-[#2f6d2a]">
-            {notice}
-          </div>
-        ) : null}
-
-        <div className="overflow-hidden rounded-[28px] border border-[#d9e3d5] bg-white">
-          <div className="hidden grid-cols-[0.5fr_1.4fr_0.8fr_1fr_0.8fr_1fr] gap-4 border-b border-[#dfe8da] bg-[#edf4ea] px-6 py-4 text-xs font-bold uppercase tracking-[0.22em] text-[#6c7968] lg:grid">
-            <span>ID</span>
-            <span>Name</span>
-            <span>Pay</span>
-            <span>Job</span>
-            <span>Orders</span>
-            <span>Actions</span>
-          </div>
-
-          {isLoading ? (
-            <div className="px-6 py-12 text-center text-sm font-semibold text-[#6c7968]">
-              Loading employees...
             </div>
-          ) : null}
 
-          {!isLoading && employees.length === 0 && !error ? (
-            <div className="px-6 py-12 text-center text-sm font-semibold text-[#6c7968]">
-              No employees found.
-            </div>
-          ) : null}
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-[#8a6240] mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => updateForm('name', e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
+                    placeholder="e.g. John Doe"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-[#8a6240] mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => updateForm('email', e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
+                    placeholder="staff@matcha.com"
+                    required
+                  />
+                </div>
+              </div>
 
-          {!isLoading && employees.length > 0 ? (
-            <div className="divide-y divide-[#ebf0e8]">
-              {employees.map((employee) => (
-                <article
-                  key={employee.employeeid}
-                  className="grid gap-4 px-6 py-5 lg:grid-cols-[0.5fr_1.4fr_0.8fr_1fr_0.8fr_1fr] lg:items-center"
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-[#8a6240] mb-1">Pay</label>
+                  <input
+                    type="number"
+                    value={form.pay}
+                    onChange={(e) => updateForm('pay', e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
+                    min="0"
+                    placeholder="0.00"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                {editingEmployee ? (
+                  <div className="rounded-xl bg-[#f8f1e7] px-4 py-3 text-sm text-[#6f5848]">
+                    Order count: <span className="font-bold">{editingEmployee.ordernum}</span>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="md:col-span-2 flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-8 py-3 bg-[#2f7a5f] text-white rounded-xl font-bold hover:bg-[#25614b] transition-all disabled:opacity-50"
                 >
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
-                      ID
-                    </p>
-                    <p className="text-sm font-semibold text-[#223020]">
-                      {employee.employeeid}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
-                      Name
-                    </p>
-                    <p className="text-base font-semibold text-[#223020]">
-                      {employee.name}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
-                      Pay
-                    </p>
-                    <p className="text-sm font-medium text-[#586756]">
-                      {currencyFormatter.format(employee.pay)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
-                      Job
-                    </p>
-                    <p className="text-sm font-medium text-[#586756]">
-                      {employee.job}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
-                      Orders
-                    </p>
-                    <p className="text-sm font-medium text-[#586756]">
-                      {employee.ordernum}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => startEdit(employee)}
-                      className="rounded-[12px] border border-[#6a8e67] bg-[#e6f1e1] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[#33452f] transition hover:bg-[#dcebd6]"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(employee)}
-                      className="rounded-[12px] border border-[#d9a7a0] bg-[#fff1ef] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[#97463c] transition hover:bg-[#ffe5e0]"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : null}
+                  {isSaving
+                    ? 'Saving...'
+                    : editingEmployee
+                      ? 'Update Employee'
+                      : 'Create Employee'}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-8 py-3 bg-gray-100 text-[#6f5848] rounded-xl font-bold hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }

@@ -5,6 +5,23 @@ DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS menu_items;
 DROP TABLE IF EXISTS orders_today;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+    userID SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255),
+    role VARCHAR(20) NOT NULL DEFAULT 'customer', -- 'admin', 'employee', 'customer'
+    image_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed users for testing (Password is same as email for placeholder simplicity)
+INSERT INTO users (name, email, password, role) VALUES 
+('Manager User', 'admin@matcha.com', 'admin123', 'admin'),
+('Employee User', 'staff@matcha.com', 'staff123', 'employee'),
+('Test Customer', 'customer@test.com', 'customer123', 'customer');
 
 CREATE TABLE inventory (
     inventoryID SERIAL PRIMARY KEY, 
