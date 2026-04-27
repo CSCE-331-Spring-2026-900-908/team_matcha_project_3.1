@@ -11,7 +11,7 @@ export type AuthenticatedHandler = (
  */
 export async function withAuth(
   req: NextRequest,
-  allowedRoles: ('employee' | 'manager')[],
+  allowedRoles: JWTPayload['role'][],
   handler: AuthenticatedHandler
 ) {
   const authHeader = req.headers.get('authorization');
