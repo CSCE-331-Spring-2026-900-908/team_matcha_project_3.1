@@ -16,6 +16,8 @@ type Props = {
   discountAmount?: number;
 };
 
+
+
 export default function CartSidebar({
   cart,
   onAdd,
@@ -29,6 +31,7 @@ export default function CartSidebar({
   onClose,
   discountAmount = 0,
 }: Props) {
+console.log('[CartSidebar] Rendering, isOpen:', isOpen, 'isMobileOverlay:', isMobileOverlay, 'onAdd:', typeof onAdd);
 const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
 const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 const discounted = Math.max(0, subtotal - discountAmount);
@@ -132,9 +135,17 @@ const total = discounted + tax;
                         </button>
                         <span className="w-8 text-center text-base font-bold text-[#1f2520]" aria-live="polite">{item.quantity}</span>
                         <button
-                          onClick={() => onAdd(item)}
+                          onClick={(e) => {
+                            console.log('[CartSidebar +] Button clicked, event:', e);
+                            console.log('[CartSidebar +] Button element:', e.currentTarget);
+                            console.log('[CartSidebar +] Calling onAdd with item:', item);
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onAdd(item);
+                          }}
                           className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#2f7a5f] transition-colors hover:bg-[#eef1ec] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-inset"
                           aria-label={`Increase quantity of ${item.name}`}
+                          type="button"
                         >
                           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                             <path d="M12 6v12m-6-6h12" />
