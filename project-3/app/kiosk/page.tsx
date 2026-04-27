@@ -15,7 +15,22 @@ import {
   type CartItem,
 } from '@/components/pos-types';
 
-
+type GoogleAccountsApi = {
+  id: {
+    initialize: (options: {
+      client_id: string | undefined;
+      callback: (response: { credential: string }) => void;
+    }) => void;
+    renderButton: (
+      element: HTMLElement,
+      options: {
+        theme: string;
+        size: string;
+        text: string;
+      }
+    ) => void;
+  };
+};
 
 type KioskUser = {
   userId: number;
@@ -199,13 +214,19 @@ export default function KioskPage() {
     ) as HTMLScriptElement | null;
 
     const handleReady = () => {
-      if (window.google?.accounts?.id) {
+      const googleAccounts = (window as Window & {
+        google?: { accounts?: GoogleAccountsApi };
+      }).google?.accounts;
+      if (googleAccounts?.id) {
         setGoogleScriptReady(true);
       }
     };
 
     if (existingScript) {
-      if (window.google?.accounts?.id) {
+      const googleAccounts = (window as Window & {
+        google?: { accounts?: GoogleAccountsApi };
+      }).google?.accounts;
+      if (googleAccounts?.id) {
         setGoogleScriptReady(true);
       } else {
         existingScript.addEventListener('load', handleReady);
@@ -228,7 +249,11 @@ export default function KioskPage() {
   }, []);
 
 useEffect(() => {
-  if (isLoading || !googleScriptReady || kioskUser || !window.google?.accounts?.id) return;
+  const googleAccounts = (window as Window & {
+    google?: { accounts?: GoogleAccountsApi };
+  }).google?.accounts;
+
+  if (isLoading || !googleScriptReady || kioskUser || !googleAccounts?.id) return;
 
   const handleCredentialResponse = async (response: any) => {
     try {
@@ -260,7 +285,7 @@ useEffect(() => {
     }
   };
 
-  window.google.accounts.id.initialize({
+  googleAccounts.id.initialize({
     client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     callback: handleCredentialResponse,
   });
@@ -268,7 +293,7 @@ useEffect(() => {
   const googleButtonContainer = document.getElementById('kioskGoogleBtn');
   if (googleButtonContainer) {
     googleButtonContainer.innerHTML = '';
-    window.google.accounts.id.renderButton(googleButtonContainer, {
+    googleAccounts.id.renderButton(googleButtonContainer, {
       theme: 'outline',
       size: 'large',
       text: 'signin_with',
