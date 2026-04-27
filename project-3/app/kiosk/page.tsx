@@ -163,6 +163,8 @@ export default function KioskPage() {
   const [weather, setWeather] = useState<WeatherApiResponse | null>(null);
   const [isBrewing, setIsBrewing] = useState(false);
   const [animateCartBadge, setAnimateCartBadge] = useState(false);
+  const [redeemConfirmOpen, setRedeemConfirmOpen] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState(0);
 
   useEffect(() => {
     async function loadMenu() {
@@ -261,7 +263,7 @@ useEffect(() => {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: response.credential }),
+        body: JSON.stringify({ idToken: response.credential, source: 'kiosk' }),
       });
 
       if (!res.ok) return;
@@ -348,7 +350,8 @@ useEffect(() => {
     [items]
   );
 
-  const cartTotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0) * 1.0825;
+  const subtotalForDisplay = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
+  const cartTotal = Math.max(0, subtotalForDisplay - discountAmount) * 1.0825;
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const weatherSummary =
     weather && typeof weather.current.temperatureF === 'number'
@@ -442,8 +445,19 @@ useEffect(() => {
     });
   };
 
-  const handleRedeem = async () => {
-  if (isRedeeming || points < 50) return;
+// Opens the warning modal — no API call yet
+const handleRedeem = () => {
+  if (points < 50) return;
+  if (cart.length === 0) {
+    alert('Please add a drink to your order first.');
+    return;
+  }
+  setRedeemConfirmOpen(true);
+};
+
+// Called when customer confirms in the modal
+const confirmRedeem = async () => {
+  setRedeemConfirmOpen(false);
   setIsRedeeming(true);
   const token = localStorage.getItem('auth_token');
   try {
@@ -458,6 +472,13 @@ useEffect(() => {
     }
     const data = await res.json();
     setPoints(data.points);
+
+    // Find the most expensive item (cost per unit, not total)
+    const mostExpensive = cart.reduce((max, item) =>
+      item.cost > max.cost ? item : max
+    , cart[0]);
+    setDiscountAmount(mostExpensive.cost);
+
     setRedeemSuccess(true);
     window.setTimeout(() => setRedeemSuccess(false), 3000);
   } catch {
@@ -472,7 +493,8 @@ useEffect(() => {
     setIsPlacingOrder(true);
     try {
       const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
-      const costTotal = subtotal * 1.0825;
+      const discounted = Math.max(0, subtotal - discountAmount);
+      const costTotal = discounted * 1.0825;
 
 const token = localStorage.getItem('auth_token');
 const response = await fetch('/api/orders', {
@@ -498,6 +520,7 @@ const response = await fetch('/api/orders', {
 });
 
       if (!response.ok) throw new Error('Failed to place order.');
+      setIsBrewing(true);
       // Refresh points after successful order
 if (kioskUser) {
   const token = localStorage.getItem('auth_token');
@@ -509,12 +532,12 @@ if (kioskUser) {
     setPoints(pointsData.points ?? 0);
   }
 }
-      setIsBrewing(true);
-      window.setTimeout(() => {
-        setIsBrewing(false);
-        setCart([]);
-        setIsCartOpen(false);
-      }, 2200);
+    window.setTimeout(() => {
+      setIsBrewing(false);
+      setCart([]);
+      setIsCartOpen(false);
+      setDiscountAmount(0);  
+    }, 2200);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to place order.');
     } finally {
@@ -608,44 +631,7 @@ if (kioskUser) {
                   Kiosk Ordering
                 </h1>
               </div>
-              <div className="ml-auto flex items-center">
-  {kioskUser ? (
-    // Rewards bar — shown after sign-in
-    <div className="flex items-center gap-3 rounded-[20px] border border-[#dce5d8] bg-[#eef1ec] px-5 py-2.5 shadow-sm">
-      <span className="text-xl">🏆</span>
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6d8a6f]">
-          {kioskUser.name.split(' ')[0]}
-        </p>
-        <p className="text-base font-extrabold text-[#2f7a5f]">
-          {points} pts
-          {points >= 50 && (
-            <button
-              onClick={handleRedeem}
-              disabled={isRedeeming}
-              className="ml-3 rounded-full bg-[#2f7a5f] px-3 py-0.5 text-xs font-bold text-white transition hover:bg-[#25614b] disabled:opacity-50"
-            >
-              {isRedeeming ? '...' : 'Redeem'}
-            </button>
-          )}
-        </p>
-        {redeemSuccess && (
-          <p className="text-xs font-bold text-[#2f7a5f]">✓ Free drink redeemed!</p>
-        )}
-      </div>
-    </div>
-  ) : (
-    // Sign in button — shown before sign-in
-    <button
-      onClick={() => (window as Window & { google?: { accounts?: GoogleAccountsApi } }).google?.accounts?.id.prompt()}
-      disabled={!googleScriptReady}
-      className="flex items-center gap-2 min-h-[44px] rounded-full border border-[#dce5d8] bg-white px-5 py-2 text-sm font-bold text-[#4a554a] shadow-sm transition hover:bg-[#f8f1e7] disabled:opacity-40 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
-    >
-      <span>⭐</span>
-      Sign in for Rewards
-    </button>
-  )}
-</div>
+              
             </div>
           </div>
 
@@ -874,24 +860,38 @@ if (kioskUser) {
 
       <div className="hidden lg:flex lg:self-stretch">
         <CartSidebar
-          extraFields={
-  kioskUser && points >= 50 ? (
-    <div className="pb-1">
-      <button
-        onClick={handleRedeem}
-        disabled={isRedeeming}
-        className="w-full min-h-[48px] rounded-[18px] border-2 border-[#2f7a5f] bg-[#eef1ec] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
-      >
-        {isRedeeming ? 'Redeeming...' : `🎉 Redeem Free Drink (${points} pts)`}
-      </button>
-      {redeemSuccess && (
-        <p className="mt-2 text-center text-xs font-bold text-[#2f7a5f]">✓ Redeemed! Enjoy 🍵</p>
+discountAmount={discountAmount}
+extraFields={
+  kioskUser ? (
+    <div className="space-y-2 pb-1">
+      {discountAmount > 0 && (
+        <div className="flex items-center justify-between rounded-[14px] bg-[#eef1ec] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span>🎉</span>
+            <p className="text-sm font-bold text-[#2f7a5f]">Rewards Discount</p>
+          </div>
+          <p className="text-sm font-bold text-[#2f7a5f]">
+            -{currencyFormatter.format(discountAmount)}
+          </p>
+        </div>
       )}
-    </div>
-  ) : kioskUser ? (
-    <div className="rounded-[14px] bg-[#f8f1e7] px-4 py-3 text-center">
-      <p className="text-xs font-bold text-[#6d8a6f]">⭐ {points} / 50 pts</p>
-      <p className="text-xs text-[#4a554a] mt-1">{50 - points} more points for a free drink</p>
+      {points >= 50 && discountAmount === 0 ? (
+        <button
+          onClick={handleRedeem}
+          disabled={isRedeeming}
+          className="w-full min-h-[48px] rounded-[18px] border-2 border-[#2f7a5f] bg-[#eef1ec] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+        >
+          {isRedeeming ? 'Redeeming...' : `🎉 Redeem Free Drink (${points} pts)`}
+        </button>
+      ) : discountAmount === 0 ? (
+        <div className="rounded-[14px] bg-[#f8f1e7] px-4 py-3 text-center">
+          <p className="text-xs font-bold text-[#6d8a6f]">⭐ {points} / 50 pts</p>
+          <p className="text-xs text-[#4a554a] mt-1">{50 - points} more points for a free drink</p>
+        </div>
+      ) : null}
+      {redeemSuccess && (
+        <p className="text-center text-xs font-bold text-[#2f7a5f]">✓ Free drink applied! Enjoy 🍵</p>
+      )}
     </div>
   ) : undefined
 }
@@ -930,24 +930,38 @@ if (kioskUser) {
       )}
 
       <CartSidebar
-      extraFields={
-  kioskUser && points >= 50 ? (
-    <div className="pb-1">
-      <button
-        onClick={handleRedeem}
-        disabled={isRedeeming}
-        className="w-full min-h-[48px] rounded-[18px] border-2 border-[#2f7a5f] bg-[#eef1ec] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
-      >
-        {isRedeeming ? 'Redeeming...' : `🎉 Redeem Free Drink (${points} pts)`}
-      </button>
-      {redeemSuccess && (
-        <p className="mt-2 text-center text-xs font-bold text-[#2f7a5f]">✓ Redeemed! Enjoy 🍵</p>
+discountAmount={discountAmount}
+extraFields={
+  kioskUser ? (
+    <div className="space-y-2 pb-1">
+      {discountAmount > 0 && (
+        <div className="flex items-center justify-between rounded-[14px] bg-[#eef1ec] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span>🎉</span>
+            <p className="text-sm font-bold text-[#2f7a5f]">Rewards Discount</p>
+          </div>
+          <p className="text-sm font-bold text-[#2f7a5f]">
+            -{currencyFormatter.format(discountAmount)}
+          </p>
+        </div>
       )}
-    </div>
-  ) : kioskUser ? (
-    <div className="rounded-[14px] bg-[#f8f1e7] px-4 py-3 text-center">
-      <p className="text-xs font-bold text-[#6d8a6f]">⭐ {points} / 50 pts</p>
-      <p className="text-xs text-[#4a554a] mt-1">{50 - points} more points for a free drink</p>
+      {points >= 50 && discountAmount === 0 ? (
+        <button
+          onClick={handleRedeem}
+          disabled={isRedeeming}
+          className="w-full min-h-[48px] rounded-[18px] border-2 border-[#2f7a5f] bg-[#eef1ec] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] disabled:opacity-50 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+        >
+          {isRedeeming ? 'Redeeming...' : `🎉 Redeem Free Drink (${points} pts)`}
+        </button>
+      ) : discountAmount === 0 ? (
+        <div className="rounded-[14px] bg-[#f8f1e7] px-4 py-3 text-center">
+          <p className="text-xs font-bold text-[#6d8a6f]">⭐ {points} / 50 pts</p>
+          <p className="text-xs text-[#4a554a] mt-1">{50 - points} more points for a free drink</p>
+        </div>
+      ) : null}
+      {redeemSuccess && (
+        <p className="text-center text-xs font-bold text-[#2f7a5f]">✓ Free drink applied! Enjoy 🍵</p>
+      )}
     </div>
   ) : undefined
 }
@@ -993,7 +1007,54 @@ if (kioskUser) {
           presentation="fullscreen"
         />
       )}
+{/* Redeem confirmation modal */}
+{redeemConfirmOpen && (() => {
+  const mostExpensive = cart.length > 0
+    ? cart.reduce((max, item) => item.cost > max.cost ? item : max, cart[0])
+    : null;
 
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#1f2520]/60 p-6 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-[32px] border border-[#e8e2d7] bg-white p-8 text-center shadow-[0_30px_80px_rgba(31,37,32,0.2)]">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#eef1ec] text-3xl">
+          🏆
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">Redeem Reward</p>
+        <h2 className="mt-3 text-2xl font-extrabold text-[#1f2520]">Use 50 points?</h2>
+        <p className="mt-3 text-sm leading-6 text-[#4a554a]">
+          Your most expensive drink will be free:
+        </p>
+        {mostExpensive && (
+          <div className="mt-4 rounded-[18px] border border-[#e8e2d7] bg-[#f8f1e7] px-5 py-3">
+            <p className="font-bold text-[#1f2520]">{mostExpensive.name}</p>
+            <p className="text-lg font-extrabold text-[#2f7a5f]">
+              {currencyFormatter.format(mostExpensive.cost)} → FREE
+            </p>
+            {mostExpensive.quantity > 1 && (
+              <p className="mt-1 text-xs text-[#6d8a6f]">
+                Only one will be free — you have {mostExpensive.quantity} in your cart.
+              </p>
+            )}
+          </div>
+        )}
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={() => setRedeemConfirmOpen(false)}
+            className="flex-1 min-h-[48px] rounded-[18px] border border-[#e8e2d7] bg-[#f8f1e7] px-4 py-2 text-sm font-bold text-[#4a554a] transition hover:bg-[#efe3d0] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmRedeem}
+            className="flex-1 min-h-[48px] rounded-[18px] bg-[#2f7a5f] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#25614b] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+})()}
       {isBrewing ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1f2520]/72 p-6 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="brewing-title" aria-describedby="brewing-copy">
           <div className="w-full max-w-md rounded-[32px] border border-white/12 bg-[linear-gradient(180deg,#fffdf9_0%,#eef1ec_100%)] p-8 text-center shadow-[0_30px_80px_rgba(31,37,32,0.3)]">
