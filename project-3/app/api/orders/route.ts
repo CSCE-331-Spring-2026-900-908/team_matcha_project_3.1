@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createOrder } from '@/lib/order';
+import { createOrder, OrderAvailabilityError } from '@/lib/order';
 import { withAuth } from '@/lib/middleware-utils';
 
 export async function POST(req: NextRequest) {
@@ -15,6 +15,16 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
+    if (error instanceof OrderAvailabilityError) {
+      return NextResponse.json(
+        {
+          error: 'Unable to place order because one or more ingredients are unavailable.',
+          unavailableItems: error.unavailableItems,
+        },
+        { status: 409 }
+      );
+    }
+
     console.error('Failed to create order:', error);
     return NextResponse.json({ error: 'Failed to create order.' }, { status: 500 });
   }

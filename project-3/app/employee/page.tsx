@@ -6,6 +6,9 @@ import CartSidebar from '@/components/CartSidebar';
 import CustomizationModal from '@/components/CustomizationModal';
 import AuthGuard from '@/components/AuthGuard';
 import AssistantWidget from '@/components/AssistantWidget';
+import OrderUnavailableModal, {
+  type UnavailableOrderItem,
+} from '@/components/OrderUnavailableModal';
 import { authFetch } from '@/lib/fetch-utils';
 import { useRouter } from 'next/navigation';
 import {
@@ -41,6 +44,7 @@ function EmployeePOSContent() {
   const [customerName, setCustomerName] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
+  const [unavailableItems, setUnavailableItems] = useState<UnavailableOrderItem[] | null>(null);
 
   useEffect(() => {
     // Capture user role for conditional UI
@@ -189,7 +193,19 @@ function EmployeePOSContent() {
           })),
         }),
       });
-      if (!response.ok) throw new Error('Failed to place order.');
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          unavailableItems?: UnavailableOrderItem[];
+        };
+
+        if (Array.isArray(data.unavailableItems) && data.unavailableItems.length > 0) {
+          setUnavailableItems(data.unavailableItems);
+          return;
+        }
+
+        throw new Error(data.error || 'Failed to place order.');
+      }
       const order = await response.json();
       setOrderSuccess(order.orderid);
       setCart([]);
@@ -354,6 +370,13 @@ function EmployeePOSContent() {
             modalState.mode === 'edit' ? 'Save Changes' : 'Add to Order'
           }
           // showDialogImage={false}
+        />
+      )}
+
+      {unavailableItems && (
+        <OrderUnavailableModal
+          items={unavailableItems}
+          onClose={() => setUnavailableItems(null)}
         />
       )}
 

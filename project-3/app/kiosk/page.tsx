@@ -6,6 +6,9 @@ import MenuGrid from '@/components/MenuGrid';
 import CartSidebar from '@/components/CartSidebar';
 import CustomizationModal from '@/components/CustomizationModal';
 import AssistantWidget from '@/components/AssistantWidget';
+import OrderUnavailableModal, {
+  type UnavailableOrderItem,
+} from '@/components/OrderUnavailableModal';
 import {
   categorizeItem,
   currencyFormatter,
@@ -166,6 +169,7 @@ export default function KioskPage() {
   const [animateCartBadge, setAnimateCartBadge] = useState(false);
   const [redeemConfirmOpen, setRedeemConfirmOpen] = useState(false);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [unavailableItems, setUnavailableItems] = useState<UnavailableOrderItem[] | null>(null);
 
   useEffect(() => {
     async function loadMenu() {
@@ -532,7 +536,20 @@ const response = await fetch('/api/orders', {
   }),
 });
 
-      if (!response.ok) throw new Error('Failed to place order.');
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          unavailableItems?: UnavailableOrderItem[];
+        };
+
+        if (Array.isArray(data.unavailableItems) && data.unavailableItems.length > 0) {
+          setUnavailableItems(data.unavailableItems);
+          setIsCartOpen(true);
+          return;
+        }
+
+        throw new Error(data.error || 'Failed to place order.');
+      }
       setIsBrewing(true);
       // Refresh points after successful order
 if (kioskUser) {
@@ -1091,6 +1108,14 @@ extraFields={
           </div>
         </div>
       ) : null}
+
+      {unavailableItems && (
+        <OrderUnavailableModal
+          items={unavailableItems}
+          showDetails={false}
+          onClose={() => setUnavailableItems(null)}
+        />
+      )}
 
       <AssistantWidget onAddToCart={addToCart} />
     </main>
