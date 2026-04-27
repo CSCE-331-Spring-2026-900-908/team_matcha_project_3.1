@@ -1,3 +1,5 @@
+import type { PoolClient } from 'pg';
+
 import pool from '@/lib/db';
 
 export type Employee = {
@@ -64,7 +66,7 @@ function normalizeEmployeeWriteError(error: unknown): Error {
 }
 
 async function createLinkedUser(
-  client: Awaited<ReturnType<typeof pool.connect>>,
+  client: PoolClient,
   input: {
     name: string;
     email: string;
