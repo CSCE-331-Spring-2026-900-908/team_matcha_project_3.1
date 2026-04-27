@@ -8,12 +8,6 @@ type MenuItem = {
   cost: number;
 };
 
-type InventoryItem = {
-  inventoryId: number;
-  name: string;
-  cost: number;
-};
-
 type CategoryKey = 'milkTeas' | 'fruitTeas' | 'greenOolong';
 
 const categoryConfig: {
@@ -28,7 +22,13 @@ const categoryConfig: {
 
 const sweetnessLevels = ['0%', '25%', '50%', '75%', '100%', '125%'];
 const iceLevels = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
-const toppingKeywords = ['tapioca', 'boba', 'red bean', 'honey'];
+const addOnOptions = [
+  { name: 'Boba', cost: 0.5 },
+  { name: 'Pudding', cost: 0.6 },
+  { name: 'Grass Jelly', cost: 0.5 },
+  { name: 'Red Bean', cost: 0.5 },
+  { name: 'Aloe Vera', cost: 0.7 },
+];
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 2,
@@ -56,17 +56,10 @@ function categorizeItem(name: string): CategoryKey | null {
   return null;
 }
 
-function isToppingItem(item: InventoryItem) {
-  const normalized = item.name.toLowerCase();
-  return toppingKeywords.some((keyword) => normalized.includes(keyword));
-}
-
 export default function MenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
-  const [toppings, setToppings] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [menuError, setMenuError] = useState<string | null>(null);
-  const [toppingError, setToppingError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,7 +67,6 @@ export default function MenuPage() {
     async function loadMenuBoardData() {
       setIsLoading(true);
       setMenuError(null);
-      setToppingError(null);
 
       try {
         const menuResponse = await fetch('/api/menu');
@@ -94,40 +86,6 @@ export default function MenuPage() {
             fetchError instanceof Error
               ? fetchError.message
               : 'Failed to load menu items.'
-          );
-        }
-      }
-
-      try {
-        const token =
-          typeof window !== 'undefined'
-            ? window.localStorage.getItem('auth_token')
-            : null;
-        const headers = new Headers();
-
-        if (token) {
-          headers.set('Authorization', `Bearer ${token}`);
-        }
-
-        const inventoryResponse = await fetch('/api/manager/inventory', {
-          headers,
-        });
-
-        if (!inventoryResponse.ok) {
-          throw new Error('Toppings unavailable.');
-        }
-
-        const inventoryData = (await inventoryResponse.json()) as InventoryItem[];
-
-        if (isMounted) {
-          setToppings(inventoryData.filter(isToppingItem));
-        }
-      } catch (fetchError) {
-        if (isMounted) {
-          setToppingError(
-            fetchError instanceof Error
-              ? fetchError.message
-              : 'Toppings unavailable.'
           );
         }
       } finally {
@@ -159,50 +117,43 @@ export default function MenuPage() {
     );
   }, [items]);
 
-  const toppingText =
-    toppings.length > 0
-      ? toppings
-          .map((topping) => `${topping.name} (${currencyFormatter.format(topping.cost)})`)
-          .join(' • ')
-      : toppingError ?? 'Loading toppings...';
-
   function renderCategory(category: (typeof categoryConfig)[number]) {
     const categoryItems = groupedItems[category.key];
 
     return (
       <section className="grid min-h-0 grid-rows-[auto_1fr] overflow-hidden">
         <div
-          className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 border-b border-[#454039] pb-1"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-[0.5vw] border-b-[0.12vw] border-[#454039] pb-[0.3vw]"
           style={{ color: category.color }}
         >
-          <h2 className="truncate font-serif text-[1.14rem] font-black uppercase leading-none tracking-normal sm:text-[1.55rem] lg:text-[1.95rem]">
+          <h2 className="menu-board-category-title truncate font-serif text-[1.85vw] font-black uppercase leading-none tracking-[0.01em]">
             {category.title}
           </h2>
-          <span className="text-[0.62rem] font-black uppercase tracking-[0.08em] text-[#777064] sm:text-[0.78rem]">
+          <span className="menu-board-price-label text-[0.8vw] font-black uppercase tracking-[0.08em] text-[#777064]">
             Price
           </span>
         </div>
 
-        <ol className="grid min-h-0 auto-rows-min content-start gap-1.5 overflow-hidden pt-1 sm:gap-2">
+        <ol className="grid min-h-0 auto-rows-min content-start gap-[0.42vw] overflow-hidden pt-[0.5vw]">
           {categoryItems.map((item, index) => (
             <li
               key={item.menuid}
-              className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1.5 sm:gap-2"
+              className="grid min-w-0 grid-cols-[1.7vw_minmax(0,1fr)_auto] items-center gap-[0.45vw]"
             >
-              <span className="grid size-5 shrink-0 place-items-center rounded-full border border-[#9c968c] font-serif text-[0.58rem] font-bold leading-none text-[#686158] sm:size-6 sm:text-[0.72rem]">
+              <span className="menu-board-index grid h-[1.7vw] w-[1.7vw] shrink-0 place-items-center rounded-full border border-[#9c968c] font-serif text-[0.76vw] font-bold leading-none text-[#686158]">
                 {index + 1}
               </span>
-              <div className="flex min-w-0 items-center gap-1">
-                <span className="min-w-0 truncate text-[0.84rem] font-bold leading-tight text-[#302c27] sm:text-[1.05rem] lg:text-[1.16rem]">
+              <div className="flex min-w-0 items-center gap-[0.45vw]">
+                <span className="menu-board-item-name min-w-0 truncate text-[1.24vw] font-bold leading-tight text-[#302c27]">
                   {item.name}
                 </span>
                 <span
-                  className="h-px min-w-3 flex-1 border-t border-dotted"
+                  className="h-px min-w-[0.65vw] flex-1 border-t-[0.12vw] border-dotted"
                   style={{ borderColor: category.color }}
                   aria-hidden="true"
                 />
               </div>
-              <span className="font-serif text-[0.84rem] font-black leading-none text-[#27231f] sm:text-[1rem] lg:text-[1.1rem]">
+              <span className="menu-board-item-price font-serif text-[1.24vw] font-black leading-none text-[#27231f]">
                 {priceFormatter.format(item.cost)}
               </span>
             </li>
@@ -213,69 +164,74 @@ export default function MenuPage() {
   }
 
   return (
-    <main className="h-dvh overflow-hidden bg-[#2f7a5f] p-2 text-[1.05rem] text-[#28251f] sm:p-3 lg:text-[1.12rem]">
+    <main className="h-dvh w-screen overflow-hidden bg-[#1d4738]">
       <section
         id="main-content"
-        className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden border border-[#d8d1c5] bg-[#fffdf8] shadow-[0_16px_40px_rgba(40,34,25,0.12)]"
+        className="menu-board grid h-full w-full min-h-0 grid-rows-[13%_1fr_18%] overflow-hidden border-[0.24vw] border-[#d8d1c5] bg-[#fffdf8] text-[#28251f] shadow-[0_1vw_3.3vw_rgba(16,24,20,0.28)]"
+        aria-label="Bubble tea menu board display"
       >
-        <header className="flex min-h-0 items-start border-b-2 border-[#37332c] px-3 py-2 sm:px-5">
-          <div className="min-w-0">
-            <p className="font-serif text-[0.68rem] font-bold uppercase tracking-[0.28em] text-[#6b6458] sm:text-sm">
-              Team Matcha
-            </p>
-            <h1 className="truncate font-serif text-[2.05rem] font-black uppercase leading-none tracking-normal text-[#25211d] sm:text-[2.8rem] lg:text-[3.45rem]">
-              Bubble Tea Menu
-            </h1>
-          </div>
-        </header>
+          <header className="flex min-h-0 items-start border-b-[0.2vw] border-[#37332c] px-[2.5vw] py-[1.2vw]">
+            <div className="min-w-0">
+              <p className="menu-board-eyebrow font-serif text-[0.92vw] font-bold uppercase tracking-[0.24em] text-[#6b6458]">
+                Team Matcha
+              </p>
+              <h1 className="menu-board-title truncate font-serif text-[3.15vw] font-black uppercase leading-none tracking-normal text-[#25211d]">
+                Bubble Tea Menu
+              </h1>
+            </div>
+          </header>
 
-        <div className="min-h-0 overflow-hidden px-2 py-2 sm:px-3 lg:px-4">
-          {isLoading ? (
-            <div className="grid h-full place-items-center font-serif text-lg font-bold uppercase tracking-[0.16em] text-[#6b6458]">
-              Loading menu...
-            </div>
-          ) : menuError ? (
-            <div className="grid h-full place-items-center px-4 text-center font-serif text-lg font-bold text-[#8b3f39]">
-              {menuError}
-            </div>
-          ) : (
-            <div className="grid h-full min-h-0 grid-cols-1 gap-x-4 gap-y-1 overflow-hidden sm:grid-cols-[1.45fr_1fr] sm:gap-x-12 lg:gap-x-20">
-              {renderCategory(categoryConfig[0])}
-              <div className="grid min-h-0 auto-rows-min content-start gap-y-7 overflow-hidden">
-                {renderCategory(categoryConfig[1])}
-                {renderCategory(categoryConfig[2])}
+          <div className="min-h-0 overflow-hidden px-[1.8vw] py-[1vw]">
+            {isLoading ? (
+              <div className="menu-board-status grid h-full place-items-center font-serif text-[1.45vw] font-bold uppercase tracking-[0.16em] text-[#6b6458]">
+                Loading menu...
               </div>
-            </div>
-          )}
-        </div>
+            ) : menuError ? (
+              <div className="menu-board-status grid h-full place-items-center px-[2vw] text-center font-serif text-[1.4vw] font-bold text-[#8b3f39]">
+                {menuError}
+              </div>
+            ) : (
+              <div className="grid h-full min-h-0 grid-cols-[1.45fr_1fr] gap-x-[1.8vw] overflow-hidden">
+                {renderCategory(categoryConfig[0])}
+                <div className="grid min-h-0 auto-rows-min content-start gap-y-[1.2vw] overflow-hidden">
+                  {renderCategory(categoryConfig[1])}
+                  {renderCategory(categoryConfig[2])}
+                </div>
+              </div>
+            )}
+          </div>
 
-        <footer className="grid min-h-0 grid-cols-1 gap-2 border-t border-[#d5cec2] bg-[#ebe7df] px-3 py-3 text-[#302c27] landscape:grid-cols-[1.25fr_1fr_1fr] sm:grid-cols-3 sm:gap-3 sm:px-5 sm:py-4">
-          <section className="grid grid-cols-[auto_1fr] gap-2 sm:block">
-            <h3 className="whitespace-nowrap font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-2 sm:mb-1 sm:text-[1.05rem]">
-              Toppings
-            </h3>
-            <p className="truncate text-[0.76rem] font-semibold leading-tight sm:text-[0.92rem] lg:text-[1.04rem]">
-              {toppingText}
-            </p>
-          </section>
-          <section className="grid grid-cols-[auto_1fr] gap-2 sm:block">
-            <h3 className="whitespace-nowrap font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-2 sm:mb-1 sm:text-[1.05rem]">
-              Sweetness Levels
-            </h3>
-            <p className="truncate text-[0.76rem] font-semibold leading-tight sm:text-[0.92rem] lg:text-[1.04rem]">
-              {sweetnessLevels.join(' • ')}
-            </p>
-          </section>
-          <section className="grid grid-cols-[auto_1fr] gap-2 sm:block">
-            <h3 className="whitespace-nowrap font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-2 sm:mb-1 sm:text-[1.05rem]">
-              Ice Levels
-            </h3>
-            <p className="truncate text-[0.76rem] font-semibold leading-tight sm:text-[0.92rem] lg:text-[1.04rem]">
-              {iceLevels.join(' • ')}
-            </p>
-          </section>
-        </footer>
-      </section>
+          <footer className="grid min-h-0 grid-cols-[1.05fr_0.85fr_1.1fr] gap-[0.8vw] border-t-[0.1vw] border-[#d5cec2] bg-[#ebe7df] px-[2.5vw] py-[0.95vw] text-[#302c27]">
+            <section>
+              <h3 className="menu-board-panel-title font-serif text-[1vw] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-[0.18vw]">
+                Add-Ons
+              </h3>
+              <p className="menu-board-panel-copy mt-[0.4vw] text-[0.9vw] font-semibold leading-[1.3]">
+                {addOnOptions
+                  .map((addOn) => `${addOn.name} (${currencyFormatter.format(addOn.cost)})`)
+                  .join(' • ')}
+              </p>
+            </section>
+
+            <section>
+              <h3 className="menu-board-panel-title font-serif text-[1vw] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-[0.18vw]">
+                Sweetness
+              </h3>
+              <p className="menu-board-panel-copy mt-[0.4vw] text-[0.9vw] font-semibold leading-[1.3]">
+                {sweetnessLevels.join(' • ')}
+              </p>
+            </section>
+
+            <section>
+              <h3 className="menu-board-panel-title font-serif text-[1vw] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-[0.18vw]">
+                Ice Level
+              </h3>
+              <p className="menu-board-panel-copy mt-[0.4vw] text-[0.9vw] font-semibold leading-[1.3]">
+                {iceLevels.join(' • ')}
+              </p>
+            </section>
+          </footer>
+        </section>
     </main>
   );
 }
