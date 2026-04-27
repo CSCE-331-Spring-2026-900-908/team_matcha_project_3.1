@@ -220,32 +220,23 @@ h3,
 }
 
 /* ============================================================
-   ACCESSIBILITY MODE (Zoom & High Contrast)
+   ACCESSIBILITY MODE (Text Scaling)
    ============================================================ */
 
 html.accessibility-mode {
-  font-size: 20px !important; /* Significant zoom but not overwhelming */
+  font-size: 20px !important;
 }
 
-/* Maintain high contrast using the Matcha palette */
-html.accessibility-mode body {
-  background-color: #eef1ec !important; /* Matcha Fog */
-  color: #1f2520 !important; /* Matcha Dark */
-}
-
-/* Boost font sizes while maintaining hierarchy */
 html.accessibility-mode h1 { font-size: 3.5rem !important; }
 html.accessibility-mode h2 { font-size: 2.75rem !important; }
 html.accessibility-mode h3 { font-size: 2.25rem !important; }
 html.accessibility-mode h4 { font-size: 1.75rem !important; }
 
-/* Global text overrides for readability */
 html.accessibility-mode p,
 html.accessibility-mode span,
 html.accessibility-mode li,
 html.accessibility-mode b,
 html.accessibility-mode strong {
-  color: #1f2520 !important; /* Force darker text */
   line-height: 1.5 !important;
 }
 
@@ -282,10 +273,10 @@ html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
   width: auto !important;
   min-height: 36px !important;
   padding: 0.45rem 0.7rem !important;
-  border: 1px solid #c8d1c4 !important;
+  border: 1px solid #8ab4f8 !important;
   border-radius: 12px !important;
-  background: linear-gradient(180deg, #fffdf9 0%, #f8faf7 100%) !important;
-  box-shadow: 0 10px 24px rgba(47, 36, 29, 0.08) !important;
+  background: linear-gradient(180deg, #e8f0fe 0%, #d2e3fc 100%) !important;
+  box-shadow: 0 10px 24px rgba(26, 115, 232, 0.16) !important;
   text-decoration: none !important;
   transition:
     border-color 0.2s ease,
@@ -295,7 +286,7 @@ html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
 
 .google-translate-widget .goog-te-gadget-simple::before {
   content: "Translate";
-  color: var(--matcha-ink) !important;
+  color: #1967d2 !important;
   font-family: var(--font-sans) !important;
   font-size: 0.84rem !important;
   font-weight: 700 !important;
@@ -303,17 +294,17 @@ html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
 }
 
 .google-translate-widget .goog-te-gadget-simple:hover {
-  border-color: #9ab29b !important;
-  box-shadow: 0 14px 28px rgba(47, 36, 29, 0.12) !important;
+  border-color: #1a73e8 !important;
+  box-shadow: 0 14px 28px rgba(26, 115, 232, 0.22) !important;
   transform: translateY(-1px);
 }
 
 .google-translate-widget .goog-te-gadget-simple:focus-within {
   outline: none !important;
-  border-color: #2f7a5f !important;
+  border-color: #1a73e8 !important;
   box-shadow:
-    0 0 0 4px rgba(47, 122, 95, 0.18),
-    0 14px 28px rgba(47, 36, 29, 0.12) !important;
+    0 0 0 4px rgba(26, 115, 232, 0.2),
+    0 14px 28px rgba(26, 115, 232, 0.22) !important;
 }
 
 .google-translate-widget .goog-te-gadget-simple .VIpgJd-ZVi9od-xl07Ob-lTBxed {
@@ -322,7 +313,11 @@ html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
 
 .google-translate-widget .goog-te-gadget-simple img,
 .google-translate-widget .goog-te-gadget-simple .goog-te-gadget-icon {
-  display: none !important;
+  display: inline-block !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin-right: 0.35rem !important;
+  vertical-align: middle !important;
 }
 
 .google-translate-widget .goog-te-gadget-simple .goog-te-menu-value {
@@ -332,7 +327,7 @@ html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
   gap: 0 !important;
   width: auto !important;
   margin: 0 !important;
-  color: var(--matcha-ink) !important;
+  color: #1967d2 !important;
   font-family: var(--font-sans) !important;
   font-size: 0.84rem !important;
   font-weight: 700 !important;
@@ -341,12 +336,12 @@ html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
 }
 
 .google-translate-widget .goog-te-gadget-simple .goog-te-menu-value span {
-  display: none !important;
+  display: inline !important;
   border: 0 !important;
 }
 
 .google-translate-widget .goog-te-gadget-simple .goog-te-menu-value span:last-child {
-  display: none !important;
+  display: inline !important;
 }
 
 .google-translate-widget .goog-te-gadget-simple .goog-te-menu-value::after {
@@ -354,8 +349,8 @@ html.accessibility-mode .rounded-full { border-radius: 9999px !important; }
   width: 0.5rem;
   height: 0.5rem;
   flex-shrink: 0;
-  border-right: 2px solid #2f7a5f;
-  border-bottom: 2px solid #2f7a5f;
+  border-right: 2px solid #1967d2;
+  border-bottom: 2px solid #1967d2;
   transform: rotate(45deg) translateY(-1px);
 }
 
@@ -364,11 +359,10 @@ html.accessibility-mode .google-translate-widget .goog-te-menu-value {
   font-size: 1rem !important;
 }
 
-/* High Contrast Interactive Elements using Matcha Colors */
+/* Keep interactive elements easier to target in larger-text mode */
 html.accessibility-mode button, 
 html.accessibility-mode a {
   border-width: 3px !important;
-  border-color: #1f2520 !important;
   font-weight: 700 !important;
   transition: all 0.2s ease;
 }
@@ -377,18 +371,6 @@ html.accessibility-mode a {
 html.accessibility-mode :focus {
   outline: 6px solid #2f7a5f !important;
   outline-offset: 4px !important;
-}
-
-/* Ensure backgrounds stay light for contrast */
-html.accessibility-mode .bg-white,
-html.accessibility-mode .bg-\[\#f8faf7\],
-html.accessibility-mode .bg-\[\#fdfaf6\] {
-  background-color: #ffffff !important;
-}
-
-html.accessibility-mode .bg-\[\#f8f1e7\],
-html.accessibility-mode .bg-\[\#f0e6d8\] {
-  background-color: #eef1ec !important;
 }
 
 /* Accessibility button style */

@@ -12,31 +12,46 @@ export async function POST(req: NextRequest) {
 
     // 1. Verify Google Token
     const payload = await verifyGoogleToken(idToken);
-    if (!payload || !payload.email) {
+    if (!payload || !payload.email || !payload.email_verified) {
       return NextResponse.json({ error: 'Invalid Google token' }, { status: 401 });
     }
 
     const { email, name, sub: googleId } = payload;
 
-    // 2. Find or Create User in DB
+    // 2. Allow login only for pre-authorized users already present in app_users.
     const client = await pool.connect();
     try {
-      let userResult = await client.query(
-        'SELECT id, google_id, email, name, role FROM app_users WHERE google_id = $1',
-        [googleId]
+      const userResult = await client.query(
+        `SELECT id, google_id, email, name, role
+         FROM app_users
+         WHERE google_id = $1 OR LOWER(email) = LOWER($2)
+         ORDER BY CASE WHEN google_id = $1 THEN 0 ELSE 1 END
+         LIMIT 1`,
+        [googleId, email]
       );
 
-      let user;
       if (userResult.rows.length === 0) {
-        // Create default 'employee'
-        const insertResult = await client.query(
-          'INSERT INTO app_users (google_id, email, name, role) VALUES ($1, $2, $3, $4) RETURNING id, google_id, email, name, role',
-          [googleId, email, name, 'employee']
+        return NextResponse.json(
+          { error: 'This Google account is not authorized for this POS.' },
+          { status: 403 }
         );
-        user = insertResult.rows[0];
-        console.log(`New user created: ${email} with role: employee`);
-      } else {
-        user = userResult.rows[0];
+      }
+
+      let user = userResult.rows[0];
+
+      if (
+        user.google_id !== googleId ||
+        user.email !== email ||
+        user.name !== (name || user.name)
+      ) {
+        const updatedUserResult = await client.query(
+          `UPDATE app_users
+           SET google_id = $1, email = $2, name = $3
+           WHERE id = $4
+           RETURNING id, google_id, email, name, role`,
+          [googleId, email, name || user.name, user.id]
+        );
+        user = updatedUserResult.rows[0];
       }
 
       // 3. Generate Session JWT

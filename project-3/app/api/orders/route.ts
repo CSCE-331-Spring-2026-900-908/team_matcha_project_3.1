@@ -5,15 +5,18 @@ import { withAuth } from '@/lib/middleware-utils';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { customerName, costTotal, employeeID, items } = body;
-    const order = await createOrder(customerName, costTotal, employeeID, items);
+    const { customerName, costTotal, employeeID, items, userId } = body;
+    const order = await createOrder(
+      customerName,
+      costTotal,
+      employeeID,
+      items,
+      userId ?? undefined   // undefined = guest, earnPoints skipped
+    );
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
     console.error('Failed to create order:', error);
-    return NextResponse.json(
-      { error: 'Failed to create order.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create order.' }, { status: 500 });
   }
 }
 

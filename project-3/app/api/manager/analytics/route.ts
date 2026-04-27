@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { withAuth } from '@/lib/middleware-utils';
+import { getDefaultAnalyticsDateRange, getTopSellers } from '@/lib/analytics';
 
 type SummaryRow = {
   total_orders: string;
@@ -13,13 +14,6 @@ type DailyTrendRow = {
   day: string;
   revenue: string;
   orders: string;
-};
-
-type TopSellerRow = {
-  menuid: number;
-  name: string;
-  units_sold: string;
-  sales_amount: string;
 };
 
 type HourlyTrendRow = {
@@ -37,14 +31,7 @@ function isIsoDate(value: string) {
 }
 
 function getDefaultDateRange() {
-  const now = new Date();
-  const end = now.toISOString().slice(0, 10);
-
-  const startDate = new Date(now);
-  startDate.setDate(startDate.getDate() - 6);
-  const start = startDate.toISOString().slice(0, 10);
-
-  return { start, end };
+  return getDefaultAnalyticsDateRange();
 }
 
 export async function GET(req: NextRequest) {
@@ -97,22 +84,7 @@ export async function GET(req: NextRequest) {
             ORDER BY DATE(orderdatetime) ASC;`,
             [startDate, endDate]
           ),
-          client.query<TopSellerRow>(
-            `SELECT
-              oi.menuid,
-              m.name,
-              COALESCE(SUM(oi.quantity), 0)::int AS units_sold,
-              COALESCE(SUM(COALESCE(oi.cost, m.cost) * oi.quantity), 0)::numeric AS sales_amount
-            FROM order_items oi
-            JOIN orders o ON o.orderid = oi.orderid
-            JOIN menu m ON m.menuid = oi.menuid
-            WHERE o.orderdatetime >= $1::date
-              AND o.orderdatetime < ($2::date + INTERVAL '1 day')
-            GROUP BY oi.menuid, m.name
-            ORDER BY units_sold DESC, sales_amount DESC
-            LIMIT 5;`,
-            [startDate, endDate]
-          ),
+          getTopSellers(startDate, endDate, 5),
           client.query<HourlyTrendRow>(
             `SELECT
               EXTRACT(HOUR FROM orderdatetime)::int AS hour_of_day,
@@ -157,12 +129,7 @@ export async function GET(req: NextRequest) {
           revenue: Number(row.revenue),
           orders: Number(row.orders),
         })),
-        topSellers: topSellersResult.rows.map((row) => ({
-          menuid: row.menuid,
-          name: row.name,
-          unitsSold: Number(row.units_sold),
-          salesAmount: Number(row.sales_amount),
-        })),
+        topSellers: topSellersResult,
         hourlyTrend: hourlyTrendResult.rows.map((row) => ({
           hourOfDay: Number(row.hour_of_day),
           orders: Number(row.orders),
