@@ -147,6 +147,7 @@ function getWeatherRecommendationCopy(weather: WeatherApiResponse | null) {
 }
 
 export default function KioskPage() {
+  console.log('[KioskPage] Rendering');
   const [kioskUser, setKioskUser] = useState<KioskUser | null>(null);
   const [points, setPoints] = useState(0);
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -361,19 +362,31 @@ useEffect(() => {
   const closeModal = () => setModalState(null);
 
   const addToCart = (customizedItem: CartItem) => {
-    setCart((prev) => {
-      const existingIndex = prev.findIndex((item) => hasSameCustomization(item, customizedItem));
+    try {
+      console.log('[addToCart] Called with item:', customizedItem);
+      console.log('[addToCart] customizedItem type:', typeof customizedItem, 'keys:', customizedItem ? Object.keys(customizedItem) : 'null');
+      
+      setCart((prev) => {
+        const existingIndex = prev.findIndex((item) => hasSameCustomization(item, customizedItem));
+        console.log('[addToCart] existing cart:', prev);
+        console.log('[addToCart] matching index:', existingIndex);
 
-      if (existingIndex !== -1) {
-        return prev.map((item, index) =>
-          index === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
+        if (existingIndex !== -1) {
+          console.log('[addToCart] Found match, incrementing quantity');
+          return prev.map((item, index) =>
+            index === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        }
 
-      return [...prev, { ...customizedItem, quantity: 1 }];
-    });
-    setAnimateCartBadge(true);
-    closeModal();
+        console.log('[addToCart] No match, adding as new item with quantity 1');
+        return [...prev, { ...customizedItem, quantity: 1 }];
+      });
+      setAnimateCartBadge(true);
+      console.log('[addToCart] Cart state updated and badge animation triggered');
+      closeModal();
+    } catch (error) {
+      console.error('[addToCart] ERROR:', error);
+    }
   };
 
   useEffect(() => {

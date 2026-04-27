@@ -184,9 +184,8 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
   };
 
   return (
-    <div className={`fixed bottom-6 left-5 z-[70] sm:left-6 ${className}`}>
-      {isOpen ? (
-        <section className="absolute bottom-20 left-0 flex h-[min(680px,calc(100vh-8rem))] w-[calc(100vw-2.5rem)] max-w-[420px] flex-col overflow-hidden rounded-[28px] border border-[#d7e3d5] bg-[#fffdf9] shadow-[0_26px_80px_rgba(31,37,32,0.28)]">
+<div className={`fixed bottom-6 left-5 z-[70] w-fit pointer-events-none sm:left-6 ${className}`}>  {isOpen ? (
+        <section className="pointer-events-auto absolute bottom-20 left-0 flex h-[min(680px,calc(100vh-8rem))] w-[calc(100vw-2.5rem)] max-w-[420px] flex-col overflow-hidden rounded-[28px] border border-[#d7e3d5] bg-[#fffdf9] shadow-[0_26px_80px_rgba(31,37,32,0.28)]">
           <header className="flex items-center justify-between border-b border-[#e7ded0] bg-[#1f2520] px-5 py-4 text-white">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#cfe4d5]">
@@ -281,7 +280,7 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[#6d4a13] bg-[linear-gradient(135deg,#9a6718_0%,#f4cf72_28%,#c78f28_52%,#ffe19a_72%,#9f6815_100%)] text-[#1f2520] shadow-[0_14px_34px_rgba(109,74,19,0.28)] transition-colors before:absolute before:inset-y-[-35%] before:left-[-100%] before:w-16 before:rotate-12 before:bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.95)_48%,transparent_100%)] before:blur-[2px] before:content-[''] hover:before:animate-[assistant-sheen_760ms_ease-out_forwards] focus:outline-none focus:ring-4 focus:ring-[#d9a441]/35"
+        className="pointer-events-auto group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[#6d4a13] bg-[linear-gradient(135deg,#9a6718_0%,#f4cf72_28%,#c78f28_52%,#ffe19a_72%,#9f6815_100%)] text-[#1f2520] shadow-[0_14px_34px_rgba(109,74,19,0.28)] transition-colors before:absolute before:inset-y-[-35%] before:left-[-100%] before:w-16 before:rotate-12 before:bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.95)_48%,transparent_100%)] before:blur-[2px] before:content-[''] hover:before:animate-[assistant-sheen_760ms_ease-out_forwards] focus:outline-none focus:ring-4 focus:ring-[#d9a441]/35"
         aria-label={isOpen ? 'Close assistant' : 'Open assistant'}
       >
         <span className="relative z-10">
