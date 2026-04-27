@@ -15,6 +15,36 @@ import {
   type CartItem,
 } from '@/components/pos-types';
 
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id: {
+          initialize: (options: {
+            client_id: string | undefined;
+            callback: (response: { credential: string }) => void;
+          }) => void;
+          renderButton: (
+            element: HTMLElement,
+            options: {
+              theme: string;
+              size: string;
+              text: string;
+            }
+          ) => void;
+        };
+      };
+      translate?: {
+        TranslateElement: {
+          InlineLayout?: {
+            SIMPLE?: number;
+          };
+        };
+      };
+    };
+  }
+}
+
 
 
 type KioskUser = {
