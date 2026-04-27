@@ -144,11 +144,7 @@ export default function CustomizationModal({
                 </header>
 
                 <div className="mt-10 space-y-8">
-                  {hotEligible && (
-                    <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
-                      <TemperatureToggle />
-                    </section>
-                  )}
+                  {hotEligible && TemperatureToggle()}
 
                   {temperature === 'Cold' && (
                     <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
@@ -264,9 +260,7 @@ export default function CustomizationModal({
           </div>
 
           <div className="mt-8 space-y-8 max-h-[50vh] overflow-y-auto pr-2">
-            {hotEligible && (
-              <TemperatureToggle />
-            )}
+            {hotEligible && TemperatureToggle()}
 
             {/* Ice Level */}
           {temperature === 'Cold' && (
