@@ -5,6 +5,7 @@ import MenuGrid2 from '@/components/MenuGrid2';
 import CartSidebar from '@/components/CartSidebar';
 import CustomizationModal from '@/components/CustomizationModal';
 import AuthGuard from '@/components/AuthGuard';
+import AssistantWidget from '@/components/AssistantWidget';
 import { authFetch } from '@/lib/fetch-utils';
 import { useRouter } from 'next/navigation';
 import {
@@ -378,6 +379,8 @@ function EmployeePOSContent() {
           }
         />
       )}
+
+      <AssistantWidget onAddToCart={addToCart} />
     </main>
   );
 }

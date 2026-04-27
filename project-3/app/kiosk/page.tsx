@@ -5,6 +5,7 @@ import Link from 'next/link';
 import MenuGrid from '@/components/MenuGrid';
 import CartSidebar from '@/components/CartSidebar';
 import CustomizationModal from '@/components/CustomizationModal';
+import AssistantWidget from '@/components/AssistantWidget';
 import {
   categorizeItem,
   currencyFormatter,
@@ -719,6 +720,8 @@ export default function KioskPage() {
           </div>
         </div>
       ) : null}
+
+      <AssistantWidget onAddToCart={addToCart} />
     </main>
   );
 }
