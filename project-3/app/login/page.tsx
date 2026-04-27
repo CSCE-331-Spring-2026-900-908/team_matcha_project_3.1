@@ -116,7 +116,7 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center text-xs text-gray-400">
-          Authorized personnel only. Use your company Google account.
+          Authorized personnel only. Only pre-approved Google accounts can sign in.
         </div>
       </div>
     </div>

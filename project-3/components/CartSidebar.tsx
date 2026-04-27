@@ -13,7 +13,6 @@ type Props = {
   isMobileOverlay?: boolean;
   isOpen?: boolean;
   onClose?: () => void;
-  animateCountBadge?: boolean;
 };
 
 export default function CartSidebar({
@@ -27,10 +26,8 @@ export default function CartSidebar({
   isMobileOverlay = false,
   isOpen = true,
   onClose,
-  animateCountBadge = false,
 }: Props) {
   const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
-  const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
   const tax = subtotal * 0.0825;
   const total = subtotal + tax;
 
@@ -38,6 +35,7 @@ export default function CartSidebar({
 
   const sidebarContent = (
     <aside
+      aria-label="Order summary"
       className={`flex flex-col bg-[linear-gradient(180deg,#fffdf9_0%,#f7faf7_100%)] shadow-2xl ${
         isMobileOverlay ? 'h-full w-full' : 'w-full lg:h-screen lg:w-[450px]'
       }`}
@@ -63,13 +61,10 @@ export default function CartSidebar({
               <h2 className="mt-2 text-2xl font-extrabold text-[#1f2520]">Your Order</h2>
             </div>
           </div>
-          <span className={`rounded-full bg-[#2f7a5f] px-4 py-1.5 text-sm font-bold text-white ${animateCountBadge ? 'animate-cart-bump' : ''}`}>
-            {totalItems} items
-          </span>
         </div>
       </header>
 
-      <section className="flex-1 overflow-y-auto p-8" aria-live="polite" aria-label="Cart contents">
+      <section className="flex-1 overflow-y-auto p-8" aria-live="polite" aria-atomic="true" aria-label="Cart contents">
         {cart.length === 0 ? (
           <div className="mt-12 rounded-[28px] border border-dashed border-[#d7c6b2] bg-white px-6 py-12 text-center text-[#4a554a] shadow-sm">
             <div
@@ -82,10 +77,12 @@ export default function CartSidebar({
             <p className="mt-2 text-base opacity-80">Tap a drink card to start building your order.</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6" role="list">
             {cart.map((item, index) => (
               <div
                 key={`${item.menuid}-${index}`}
+                role="listitem"
+                aria-label={`${item.name}, quantity ${item.quantity}, ${currencyFormatter.format(item.cost * item.quantity)}`}
                 className="rounded-[24px] border border-[#e8e2d7] bg-white p-5 shadow-[0_10px_24px_rgba(47,36,29,0.06)]"
               >
                 <div className="flex items-start gap-4">
@@ -129,7 +126,7 @@ export default function CartSidebar({
                             <path d="M18 12H6" />
                           </svg>
                         </button>
-                        <span className="w-8 text-center text-base font-bold text-[#1f2520]">{item.quantity}</span>
+                        <span className="w-8 text-center text-base font-bold text-[#1f2520]" aria-live="polite">{item.quantity}</span>
                         <button
                           onClick={() => onAdd(item)}
                           className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-[#2f7a5f] transition-colors hover:bg-[#eef1ec] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-inset"
@@ -151,7 +148,7 @@ export default function CartSidebar({
       </section>
 
       <footer className="border-t border-[#eadfce] bg-[linear-gradient(180deg,#fffdf9_0%,#f8f1e7_100%)] p-6 shadow-[0_-8px_30px_rgba(47,36,29,0.06)]">
-        <div className="space-y-4 rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm">
+        <div className="space-y-4 rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm" aria-label={`Order total ${currencyFormatter.format(total)}`}>
           {extraFields}
 
           <div className="flex justify-between text-base">

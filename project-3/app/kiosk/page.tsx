@@ -5,6 +5,7 @@ import Link from 'next/link';
 import MenuGrid from '@/components/MenuGrid';
 import CartSidebar from '@/components/CartSidebar';
 import CustomizationModal from '@/components/CustomizationModal';
+import AssistantWidget from '@/components/AssistantWidget';
 import {
   categorizeItem,
   currencyFormatter,
@@ -193,19 +194,41 @@ export default function KioskPage() {
 
   useEffect(() => {
     // Load Google Sign-In script
-    if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
-      setGoogleScriptReady(true);
-      return;
+    const existingScript = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    ) as HTMLScriptElement | null;
+
+    const handleReady = () => {
+      if (window.google?.accounts?.id) {
+        setGoogleScriptReady(true);
+      }
+    };
+
+    if (existingScript) {
+      if (window.google?.accounts?.id) {
+        setGoogleScriptReady(true);
+      } else {
+        existingScript.addEventListener('load', handleReady);
+      }
+
+      return () => {
+        existingScript.removeEventListener('load', handleReady);
+      };
     }
+
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
-    script.onload = () => setGoogleScriptReady(true);
+    script.addEventListener('load', handleReady);
     document.body.appendChild(script);
+
+    return () => {
+      script.removeEventListener('load', handleReady);
+    };
   }, []);
 
-  useEffect(() => {
-  if (!googleScriptReady || kioskUser) return;
+useEffect(() => {
+  if (isLoading || !googleScriptReady || kioskUser || !window.google?.accounts?.id) return;
 
   const handleCredentialResponse = async (response: any) => {
     try {
@@ -241,7 +264,17 @@ export default function KioskPage() {
     client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     callback: handleCredentialResponse,
   });
-}, [googleScriptReady, kioskUser]);
+
+  const googleButtonContainer = document.getElementById('kioskGoogleBtn');
+  if (googleButtonContainer) {
+    googleButtonContainer.innerHTML = '';
+    window.google.accounts.id.renderButton(googleButtonContainer, {
+      theme: 'outline',
+      size: 'large',
+      text: 'signin_with',
+    });
+  }
+}, [googleScriptReady, kioskUser, isLoading]);
 
 useEffect(() => {
   if (!kioskUser) return;
@@ -288,6 +321,13 @@ useEffect(() => {
       null,
     [items]
   );
+
+  const cartTotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0) * 1.0825;
+  const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const weatherSummary =
+    weather && typeof weather.current.temperatureF === 'number'
+      ? `${Math.round(weather.current.temperatureF)}°F • ${weather.current.condition}`
+      : 'Using house recommendation';
 
   const closeModal = () => setModalState(null);
 
@@ -518,16 +558,9 @@ if (kioskUser) {
     );
   }
 
-  const cartTotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0) * 1.0825;
-  const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const weatherSummary =
-    weather && typeof weather.current.temperatureF === 'number'
-      ? `${Math.round(weather.current.temperatureF)}°F • ${weather.current.condition}`
-      : 'Using house recommendation';
-
   return (
-    <main className="matcha-surface flex h-screen flex-col text-[#1f2520] lg:flex-row">
-      <section className="flex flex-1 flex-col overflow-hidden border-r border-[#eadfce]">
+    <main className="matcha-surface flex h-screen flex-col text-[#1f2520] lg:flex-row" aria-labelledby="kiosk-page-title">
+      <section className="flex flex-1 flex-col overflow-hidden border-r border-[#eadfce]" aria-label="Ordering area">
         <header className="border-b border-[#eadfce] bg-white/90 p-6 shadow-sm backdrop-blur">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -545,7 +578,7 @@ if (kioskUser) {
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
                   Self Service
                 </p>
-                <h1 className="text-3xl font-extrabold tracking-tight text-[#1f2520] lg:text-4xl">
+                <h1 id="kiosk-page-title" className="text-3xl font-extrabold tracking-tight text-[#1f2520] lg:text-4xl">
                   Kiosk Ordering
                 </h1>
               </div>
@@ -590,30 +623,68 @@ if (kioskUser) {
             </div>
           </div>
 
-          <nav className="mt-6 flex gap-3 overflow-x-auto pb-2" aria-label="Menu categories">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`inline-flex min-h-[56px] shrink-0 items-center gap-3 whitespace-nowrap rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2f7a5f] ${
-                  activeCategory === cat
-                    ? 'bg-[#2f7a5f] text-white shadow-md shadow-[#2f7a5f]/20'
-                    : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#e6d8c4]'
-                }`}
-              >
-                <span aria-hidden="true">
-                  <CategoryIcon iconName={getCategoryIcon(cat)} />
-                </span>
-                {cat}
-              </button>
-            ))}
+          <nav className="mt-6 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between" aria-label="Menu categories and rewards">
+            <div className="flex gap-3 overflow-x-auto pb-2 xl:flex-1">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  aria-pressed={activeCategory === cat}
+                  className={`inline-flex min-h-[56px] shrink-0 items-center gap-3 whitespace-nowrap rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2f7a5f] ${
+                    activeCategory === cat
+                      ? 'bg-[#2f7a5f] text-white shadow-md shadow-[#2f7a5f]/20'
+                      : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#e6d8c4]'
+                  }`}
+                >
+                  <span aria-hidden="true">
+                    <CategoryIcon iconName={getCategoryIcon(cat)} />
+                  </span>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="flex shrink-0 items-center xl:justify-end">
+              {kioskUser ? (
+                <div className="flex items-center gap-3 rounded-[20px] border border-[#dce5d8] bg-[#eef1ec] px-5 py-2.5 shadow-sm">
+                  <span className="text-xl">🏆</span>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6d8a6f]">
+                      {kioskUser.name.split(' ')[0]}
+                    </p>
+                    <p className="text-base font-extrabold text-[#2f7a5f]">
+                      {points} pts
+                      {points >= 50 && (
+                        <button
+                          onClick={handleRedeem}
+                          disabled={isRedeeming}
+                          className="ml-3 rounded-full bg-[#2f7a5f] px-3 py-0.5 text-xs font-bold text-white transition hover:bg-[#25614b] disabled:opacity-50"
+                        >
+                          {isRedeeming ? '...' : 'Redeem'}
+                        </button>
+                      )}
+                    </p>
+                    {redeemSuccess && (
+                      <p className="text-xs font-bold text-[#2f7a5f]">✓ Free drink redeemed!</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex min-h-[44px] items-center">
+                  <div
+                    id="kioskGoogleBtn"
+                    aria-label="Sign in for rewards with Google"
+                    className={googleScriptReady ? '' : 'min-w-[240px] min-h-[40px] rounded-full bg-[#f8f1e7]'}
+                  />
+                </div>
+              )}
+            </div>
           </nav>
         </header>
 
         <div id="main-content" className="flex-1 overflow-y-auto px-6 pb-32 pt-6 lg:pb-6">
-          <div className="matcha-grid mb-6 grid gap-4 rounded-[32px] border border-[#e8e2d7] bg-[linear-gradient(135deg,#fffdf9_0%,#eef1ec_100%)] p-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
+          <section className="matcha-grid mb-6 grid gap-4 rounded-[32px] border border-[#e8e2d7] bg-[linear-gradient(135deg,#fffdf9_0%,#eef1ec_100%)] p-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]" aria-labelledby="featured-drink-title">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div className="rounded-[28px] bg-[#1f2520] px-6 py-6 text-white shadow-[0_18px_44px_rgba(31,37,32,0.18)]">
+              <section className="rounded-[28px] bg-[#1f2520] px-6 py-6 text-white shadow-[0_18px_44px_rgba(31,37,32,0.18)]" aria-describedby="featured-drink-copy">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#dcefe4]">
                     Weather Pick
@@ -624,10 +695,10 @@ if (kioskUser) {
                     </span>
                   ) : null}
                 </div>
-                <h2 className="mt-4 max-w-xl text-3xl font-bold leading-tight lg:text-4xl">
+                <h2 id="featured-drink-title" className="mt-4 max-w-xl text-3xl font-bold leading-tight lg:text-4xl">
                   {featuredItem ? featuredItem.name : 'Fresh whisked matcha, ready in minutes.'}
                 </h2>
-                <p className="mt-3 max-w-2xl text-base leading-7 text-white/82">
+                <p id="featured-drink-copy" className="mt-3 max-w-2xl text-base leading-7 text-white/82">
                   {getWeatherRecommendationCopy(weather)}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
@@ -642,7 +713,10 @@ if (kioskUser) {
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button
-                    onClick={() => featuredItem && setModalState({ mode: 'add', item: featuredItem })}
+                    onClick={() => {
+                      if (!featuredItem) return;
+                      setModalState({ mode: 'add', item: featuredItem });
+                    }}
                     className="min-h-[56px] rounded-full bg-white px-6 py-3 text-base font-bold text-[#1f2520] transition hover:bg-[#eef1ec] focus:outline-none focus:ring-4 focus:ring-white/60"
                   >
                     Customize Recommended Drink
@@ -651,9 +725,9 @@ if (kioskUser) {
                     {featuredItem ? currencyFormatter.format(featuredItem.cost) : 'Cafe favorites'}
                   </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="overflow-hidden rounded-[28px] border border-[#d9e4da] bg-white shadow-[0_18px_44px_rgba(47,36,29,0.12)]">
+              <aside className="overflow-hidden rounded-[28px] border border-[#d9e4da] bg-white shadow-[0_18px_44px_rgba(47,36,29,0.12)]" aria-label="Featured drink image">
                 <div className="relative h-full min-h-[260px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
                   {featuredItem?.image_url ? (
                     <img
@@ -675,31 +749,33 @@ if (kioskUser) {
                     </p>
                   </div>
                 </div>
-              </div>
+              </aside>
             </div>
 
             <div className="grid gap-4">
-              <div className="rounded-[28px] border border-[#dce5d8] bg-white p-5 shadow-sm">
+              <section className="rounded-[28px] border border-[#dce5d8] bg-white p-5 shadow-sm" aria-labelledby="weather-pairing-title">
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
                   Weather Pairing
                 </p>
-                <p className="mt-3 text-2xl font-bold text-[#1f2520]">
+                <h3 id="weather-pairing-title" className="mt-3 text-2xl font-bold text-[#1f2520]">
                   {weather ? weather.current.condition : 'House guidance'}
-                </p>
+                </h3>
                 <p className="mt-2 text-sm leading-6 text-[#4a554a]">
                   {getWeatherRecommendationCopy(weather)}
                 </p>
                 {featuredItem ? (
                   <button
-                    onClick={() => setModalState({ mode: 'add', item: featuredItem })}
+                    onClick={() => {
+                      setModalState({ mode: 'add', item: featuredItem });
+                    }}
                     className="mt-4 min-h-[48px] rounded-full bg-[#eef1ec] px-5 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
                   >
                     Order This Recommendation
                   </button>
                 ) : null}
-              </div>
+              </section>
 
-              <div className="rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm">
+              <section className="rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm" aria-labelledby="seasonal-spotlight-title">
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Seasonal Spotlight</p>
                 <div className="mt-3 grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
                   <div className="overflow-hidden rounded-[20px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
@@ -716,9 +792,9 @@ if (kioskUser) {
                     )}
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-[#1f2520]">
+                    <h3 id="seasonal-spotlight-title" className="text-2xl font-bold text-[#1f2520]">
                       {seasonalItem ? seasonalItem.name : 'House Favorites'}
-                    </h2>
+                    </h3>
                     <p className="mt-2 text-sm leading-6 text-[#4a554a]">
                       A brighter, limited-time style item to pull attention toward specials and make the kiosk feel alive.
                     </p>
@@ -730,7 +806,9 @@ if (kioskUser) {
                       ) : null}
                       {seasonalItem ? (
                         <button
-                          onClick={() => setModalState({ mode: 'add', item: seasonalItem })}
+                          onClick={() => {
+                            setModalState({ mode: 'add', item: seasonalItem });
+                          }}
                           className="min-h-[44px] rounded-full bg-[#1f2520] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#313832] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
                         >
                           Order Brown Sugar Tea
@@ -739,34 +817,17 @@ if (kioskUser) {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Menu</p>
-                  <p className="mt-2 text-3xl font-bold text-[#1f2520]">{items.length}</p>
-                  <p className="mt-1 text-sm text-[#4a554a]">drinks and treats</p>
-                </div>
-                <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Browsing</p>
-                  <p className="mt-2 text-3xl font-bold text-[#1f2520]">{filteredItems.length}</p>
-                  <p className="mt-1 text-sm text-[#4a554a]">{activeCategory}</p>
-                </div>
-                <div className="rounded-[24px] border border-[#eadfce] bg-white px-4 py-5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Cart</p>
-                  <p className="mt-2 text-3xl font-bold text-[#1f2520]">{cartItemCount}</p>
-                  <p className="mt-1 text-sm text-[#4a554a]">items selected</p>
-                </div>
-              </div>
+              </section>
             </div>
-          </div>
+          </section>
 
-          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <section aria-labelledby="menu-section-title">
+            <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
                 Browse
               </p>
-              <h2 className="mt-2 text-3xl font-bold text-[#1f2520]">Drinks and Treats</h2>
+              <h2 id="menu-section-title" className="mt-2 text-3xl font-bold text-[#1f2520]">Drinks and Treats</h2>
             </div>
             <p className="text-sm text-[#4a554a]">
               {filteredItems.length} items in this section
@@ -781,6 +842,7 @@ if (kioskUser) {
               showAddIcon={false}
             />
           </div>
+          </section>
         </div>
       </section>
 
@@ -812,7 +874,6 @@ if (kioskUser) {
           onRemove={removeFromCart}
           onPlaceOrder={placeOrder}
           isPlacingOrder={isPlacingOrder}
-          animateCountBadge={animateCartBadge}
           onEditItem={(index) => {
             const item = cart[index];
             if (!item) return;
@@ -827,6 +888,7 @@ if (kioskUser) {
             onClick={() => setIsCartOpen(true)}
             disabled={cartItemCount === 0}
             className="flex w-full items-center justify-between rounded-[24px] bg-[#2f7a5f] p-5 text-white shadow-2xl shadow-[#2f7a5f]/40 transition-transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
+            aria-label={`View order. ${cartItemCount} items. Total ${currencyFormatter.format(cartTotal)}`}
           >
             <div className="flex items-center gap-4">
               <span className={`flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-lg font-bold ${animateCartBadge ? 'animate-cart-bump' : ''}`}>
@@ -868,7 +930,6 @@ if (kioskUser) {
         onRemove={removeFromCart}
         onPlaceOrder={placeOrder}
         isPlacingOrder={isPlacingOrder}
-        animateCountBadge={animateCartBadge}
         isMobileOverlay={true}
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -908,7 +969,7 @@ if (kioskUser) {
       )}
 
       {isBrewing ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1f2520]/72 p-6 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1f2520]/72 p-6 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="brewing-title" aria-describedby="brewing-copy">
           <div className="w-full max-w-md rounded-[32px] border border-white/12 bg-[linear-gradient(180deg,#fffdf9_0%,#eef1ec_100%)] p-8 text-center shadow-[0_30px_80px_rgba(31,37,32,0.3)]">
             <div className="relative mx-auto flex h-40 w-40 items-end justify-center">
               <span className="animate-steam-rise absolute left-9 top-1 text-3xl text-[#6d8a6f]">~</span>
@@ -920,8 +981,8 @@ if (kioskUser) {
               </div>
             </div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">Brewing</p>
-            <h2 className="mt-3 text-3xl font-bold text-[#1f2520]">Preparing your order</h2>
-            <p className="mt-3 text-base leading-7 text-[#4a554a]">
+            <h2 id="brewing-title" className="mt-3 text-3xl font-bold text-[#1f2520]">Preparing your order</h2>
+            <p id="brewing-copy" className="mt-3 text-base leading-7 text-[#4a554a]">
               Your drinks are being whisked, shaken, and queued for pickup.
             </p>
             <div className="mt-6 overflow-hidden rounded-full bg-[#dce5d8]">
@@ -930,6 +991,8 @@ if (kioskUser) {
           </div>
         </div>
       ) : null}
+
+      <AssistantWidget onAddToCart={addToCart} />
     </main>
   );
 }
