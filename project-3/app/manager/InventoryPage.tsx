@@ -18,6 +18,29 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 });
 
+function getStockStatus(item: InventoryItem) {
+  if (item.inventoryNum === 0) {
+    return {
+      label: 'Out of Stock',
+      rowClassName: 'border-[#d98f86] bg-[#fff0ed] text-[#5f241d]',
+      badgeClassName: 'border-[#b85d53] bg-[#c94335] text-white',
+    };
+  }
+
+  const isLowStock =
+    item.inventoryNum <= 100 || (item.daysLeft !== null && item.daysLeft <= 14);
+
+  if (isLowStock) {
+    return {
+      label: 'Low Stock',
+      rowClassName: 'border-[#e0c46f] bg-[#fff8d7] text-[#4f3d0c]',
+      badgeClassName: 'border-[#b98d1f] bg-[#b98712] text-white',
+    };
+  }
+
+  return null;
+}
+
 type EditModalState = {
   item: InventoryItem;
   cost: string;
@@ -301,18 +324,36 @@ export default function InventoryPage() {
             </div>
 
             <div className="divide-y divide-[#ebf0e8]">
-              {items.map((item) => (
-                <article
-                  key={item.inventoryId}
-                  className="grid gap-4 px-6 py-5 lg:grid-cols-[1.8fr_1fr_1fr_1fr_1fr_auto] lg:items-center"
-                >
+              {items.map((item) => {
+                const stockStatus = getStockStatus(item);
+
+                return (
+                  <article
+                    key={item.inventoryId}
+                    className={`grid gap-4 border px-6 py-5 lg:grid-cols-[1.8fr_1fr_1fr_1fr_1fr_auto] lg:items-center ${
+                      stockStatus
+                        ? stockStatus.rowClassName
+                        : 'border-transparent bg-white text-[#223020]'
+                    }`}
+                  >
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] lg:hidden">
                       Ingredient / Stock Item
                     </p>
-                    <p className="text-base font-semibold text-[#223020] sm:text-lg">
-                      {item.name}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-semibold text-[#223020] sm:text-lg">
+                        {item.name}
+                      </p>
+                      {stockStatus ? (
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] ${
+                            stockStatus.badgeClassName
+                          }`}
+                        >
+                          {stockStatus.label}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div>
@@ -361,7 +402,8 @@ export default function InventoryPage() {
                     </button>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -379,6 +421,38 @@ export default function InventoryPage() {
                     <h3 className="mt-2 text-2xl font-bold text-[#223020]">
                       {editModal.item.name}
                     </h3>
+                    {getStockStatus({
+                      ...editModal.item,
+                      inventoryNum: editModal.stagedStock,
+                      daysLeft:
+                        editModal.item.useAverage > 0
+                          ? Math.floor(editModal.stagedStock / editModal.item.useAverage)
+                          : null,
+                    }) ? (
+                        <span
+                          className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ${
+                          getStockStatus({
+                            ...editModal.item,
+                            inventoryNum: editModal.stagedStock,
+                            daysLeft:
+                              editModal.item.useAverage > 0
+                                ? Math.floor(editModal.stagedStock / editModal.item.useAverage)
+                                : null,
+                          })?.badgeClassName
+                        }`}
+                      >
+                        {
+                          getStockStatus({
+                            ...editModal.item,
+                            inventoryNum: editModal.stagedStock,
+                            daysLeft:
+                              editModal.item.useAverage > 0
+                                ? Math.floor(editModal.stagedStock / editModal.item.useAverage)
+                                : null,
+                          })?.label
+                        }
+                      </span>
+                    ) : null}
                   </div>
                   <button
                     type="button"
