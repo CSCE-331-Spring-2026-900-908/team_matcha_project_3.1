@@ -12,7 +12,12 @@ export type CartItem = MenuItem & {
   iceLevel?: string;
   sugarLevel?: string;
   topping?: string;
+  temperature?: 'Hot' | 'Cold';
 };
+
+export const COLD_ONLY_ITEMS = new Set<string>([]);
+export const supportsHot = (name: string): boolean =>
+  !COLD_ONLY_ITEMS.has(name);
 
 export const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
