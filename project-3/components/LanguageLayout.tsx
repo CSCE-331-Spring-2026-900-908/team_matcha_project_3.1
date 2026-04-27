@@ -1,24 +1,28 @@
 'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import GoogleTranslateWidget from "@/components/GoogleTranslateWidget";
+
+const subscribeToClientSnapshot = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function LanguageLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToClientSnapshot,
+    getClientSnapshot,
+    getServerSnapshot
+  );
   const [textSize, setTextSize] = useState<'default' | 'large' | 'x-large'>('default');
   const [contrastMode, setContrastMode] = useState(false);
   const [isReaderActive, setIsReaderActive] = useState(false);
   const [isAccessibilityPanelOpen, setIsAccessibilityPanelOpen] = useState(false);
   const readerQueueRef = useRef<string[]>([]);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -144,7 +148,7 @@ export default function LanguageLayout({
         Skip to main content
       </a>
       {mounted ? (
-        <div className="fixed right-5 top-5 z-[100] flex items-start gap-3">
+        <div className="pointer-events-none fixed right-5 top-5 z-[100] flex items-start gap-3">
           <div
             className={`w-[min(22rem,calc(100vw-2rem))] rounded-[28px] border border-[#d7dfd4] bg-white/95 p-4 shadow-[0_22px_48px_rgba(31,37,32,0.16)] backdrop-blur transition-all duration-200 ${
               isAccessibilityPanelOpen
@@ -241,7 +245,7 @@ export default function LanguageLayout({
 
           <button
             onClick={() => setIsAccessibilityPanelOpen((current) => !current)}
-            className="flex h-16 w-16 items-center justify-center rounded-full border border-[#c8d1c4] bg-[linear-gradient(180deg,#fffdf9_0%,#eef1ec_100%)] text-[#2f7a5f] shadow-[0_18px_36px_rgba(31,37,32,0.16)] transition hover:-translate-y-0.5 hover:bg-[#f8f1e7] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
+            className="pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#c8d1c4] bg-[linear-gradient(180deg,#fffdf9_0%,#eef1ec_100%)] text-[#2f7a5f] shadow-[0_18px_36px_rgba(31,37,32,0.16)] transition hover:-translate-y-0.5 hover:bg-[#f8f1e7] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
             aria-expanded={isAccessibilityPanelOpen}
             aria-label={isAccessibilityPanelOpen ? 'Close accessibility tools' : 'Open accessibility tools'}
           >
