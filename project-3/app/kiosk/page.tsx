@@ -29,6 +29,7 @@ type GoogleAccountsApi = {
         text: string;
       }
     ) => void;
+    prompt: () => void;
   };
 };
 
