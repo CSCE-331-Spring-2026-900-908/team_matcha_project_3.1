@@ -2,6 +2,7 @@
 import {
   currencyFormatter,
   getItemBadge,
+  getStockStatusLabel,
   type MenuItem,
 } from './pos-types';
 
@@ -26,14 +27,23 @@ export default function MenuGrid({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" role="list" aria-label="Available drinks">
-          {items.map(item => (
-            <article
-              key={item.menuid}
-              role="listitem"
-              aria-labelledby={`menu-item-title-${item.menuid}`}
-              className="group relative cursor-pointer overflow-hidden rounded-[24px] shadow-[0_8px_24px_rgba(47,36,29,0.10)] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(47,36,29,0.16)]"
-              onClick={() => onSelectItem(item)}
-            >
+          {items.map(item => {
+            const stockLabel = getStockStatusLabel(item.stockStatus);
+
+            return (
+              <article
+                key={item.menuid}
+                role="listitem"
+                aria-labelledby={`menu-item-title-${item.menuid}`}
+                className={`group relative cursor-pointer overflow-hidden rounded-[24px] border shadow-[0_8px_24px_rgba(47,36,29,0.10)] transition-all hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(47,36,29,0.16)] ${
+                  item.stockStatus === 'out'
+                    ? 'border-[#d98f86] bg-[#fff0ed]'
+                    : item.stockStatus === 'low'
+                      ? 'border-[#e0c46f] bg-[#fff8d7]'
+                      : 'border-transparent'
+                }`}
+                onClick={() => onSelectItem(item)}
+              >
               {/* Full bleed image */}
               <div className="relative h-64 w-full overflow-hidden">
                 {item.image_url ? (
@@ -52,11 +62,24 @@ export default function MenuGrid({
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(31,37,32,0.82)_100%)]" />
 
                 {/* Badge */}
-                {getItemBadge(item.name) ? (
-                  <span className="absolute right-3 top-3 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white backdrop-blur">
-                    {getItemBadge(item.name)}
-                  </span>
-                ) : null}
+                <div className="absolute right-3 top-3 flex flex-wrap justify-end gap-2">
+                  {stockLabel ? (
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-lg ${
+                        item.stockStatus === 'out'
+                          ? 'border-[#b85d53] bg-[#c94335]'
+                          : 'border-[#b98d1f] bg-[#b98712]'
+                      }`}
+                    >
+                      {stockLabel}
+                    </span>
+                  ) : null}
+                  {getItemBadge(item.name) ? (
+                    <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white backdrop-blur">
+                      {getItemBadge(item.name)}
+                    </span>
+                  ) : null}
+                </div>
 
                 {/* Name + price + button overlaid on image */}
                 <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
@@ -79,7 +102,8 @@ export default function MenuGrid({
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

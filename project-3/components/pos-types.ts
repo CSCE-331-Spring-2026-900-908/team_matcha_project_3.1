@@ -5,6 +5,7 @@ export type MenuItem = {
   name: string;
   cost: number;
   image_url?: string;
+  stockStatus?: 'low' | 'out';
 };
 
 export type CartItem = MenuItem & {
@@ -55,6 +56,12 @@ export const getItemBadge = (name: string) => {
   if (n.includes('strawberry') || n.includes('mango')) return 'Bright';
   if (n.includes('cake') || n.includes('snack')) return 'Pairing';
 
+  return null;
+};
+
+export const getStockStatusLabel = (status?: MenuItem['stockStatus']) => {
+  if (status === 'out') return 'Out of Stock';
+  if (status === 'low') return 'Low Stock';
   return null;
 };
 

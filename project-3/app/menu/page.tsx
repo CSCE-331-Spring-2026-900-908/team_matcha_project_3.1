@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import {
+  getStockStatusLabel,
+  type MenuItem as SharedMenuItem,
+} from '@/components/pos-types';
 import { AVAILABLE_TOPPINGS, TOPPING_COSTS } from '@/lib/toppings';
 
-type MenuItem = {
-  menuid: number;
-  name: string;
-  cost: number;
-};
+type MenuItem = Pick<SharedMenuItem, 'menuid' | 'name' | 'cost' | 'stockStatus'>;
 
 type CategoryKey = 'milkTeas' | 'fruitTeas' | 'greenOolong';
 
@@ -136,7 +136,13 @@ export default function MenuPage() {
           {categoryItems.map((item, index) => (
             <li
               key={item.menuid}
-              className="grid min-w-0 grid-cols-[1.7vw_minmax(0,1fr)_auto] items-center gap-[0.45vw]"
+              className={`grid min-w-0 grid-cols-[1.7vw_minmax(0,1fr)_auto] items-center gap-[0.45vw] rounded-[0.45vw] border px-[0.25vw] ${
+                item.stockStatus === 'out'
+                  ? 'border-[#d98f86] bg-[#fff0ed]'
+                  : item.stockStatus === 'low'
+                    ? 'border-[#e0c46f] bg-[#fff8d7]'
+                    : 'border-transparent'
+              }`}
             >
               <span className="menu-board-index grid h-[1.7vw] w-[1.7vw] shrink-0 place-items-center rounded-full border border-[#9c968c] font-serif text-[0.76vw] font-bold leading-none text-[#686158]">
                 {index + 1}
@@ -145,6 +151,15 @@ export default function MenuPage() {
                 <span className="menu-board-item-name min-w-0 truncate text-[1.24vw] font-bold leading-tight text-[#302c27]">
                   {item.name}
                 </span>
+                {getStockStatusLabel(item.stockStatus) ? (
+                  <span
+                    className={`shrink-0 rounded-full px-[0.45vw] py-[0.12vw] text-[0.48vw] font-black uppercase tracking-[0.08em] text-white ${
+                      item.stockStatus === 'out' ? 'bg-[#c94335]' : 'bg-[#b98712]'
+                    }`}
+                  >
+                    {getStockStatusLabel(item.stockStatus)}
+                  </span>
+                ) : null}
                 <span
                   className="h-px min-w-[0.65vw] flex-1 border-t-[0.12vw] border-dotted"
                   style={{ borderColor: category.color }}

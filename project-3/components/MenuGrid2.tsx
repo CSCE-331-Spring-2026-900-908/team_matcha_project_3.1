@@ -1,5 +1,10 @@
 'use client';
-import { categorizeItem, currencyFormatter, type MenuItem } from './pos-types';
+import {
+  categorizeItem,
+  currencyFormatter,
+  getStockStatusLabel,
+  type MenuItem,
+} from './pos-types';
 
 type Props = {
   items: MenuItem[];
@@ -22,16 +27,38 @@ export default function MenuGrid({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map(item => (
-            <button
-              key={item.menuid}
-              onClick={() => onSelectItem(item)}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-[#eadfce] bg-white transition-all hover:border-[#2f7a5f] hover:shadow-lg active:scale-95"
-            >
+          {items.map(item => {
+            const stockLabel = getStockStatusLabel(item.stockStatus);
+
+            return (
+              <button
+                key={item.menuid}
+                onClick={() => onSelectItem(item)}
+                className={`group flex flex-col overflow-hidden rounded-2xl border transition-all hover:shadow-lg active:scale-95 ${
+                  item.stockStatus === 'out'
+                    ? 'border-[#d98f86] bg-[#fff0ed]'
+                    : item.stockStatus === 'low'
+                      ? 'border-[#e0c46f] bg-[#fff8d7]'
+                      : 'border-[#eadfce] bg-white hover:border-[#2f7a5f]'
+                }`}
+              >
               <div className="flex flex-1 flex-col p-4 text-left">
-                <span className="text-xs font-bold uppercase text-[#8a6240] opacity-70">
-                  {categorizeItem(item.name)}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold uppercase text-[#8a6240] opacity-70">
+                    {categorizeItem(item.name)}
+                  </span>
+                  {stockLabel ? (
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.12em] ${
+                        item.stockStatus === 'out'
+                          ? 'border-[#b85d53] bg-[#c94335] text-white'
+                          : 'border-[#b98d1f] bg-[#b98712] text-white'
+                      }`}
+                    >
+                      {stockLabel}
+                    </span>
+                  ) : null}
+                </div>
                 <h3 className="mt-1 font-bold leading-tight text-[#2f241d]">{item.name}</h3>
                 <div className="mt-auto pt-3 flex items-center justify-between">
                   <p className="text-lg font-bold text-[#2f7a5f]">
@@ -47,7 +74,8 @@ export default function MenuGrid({
                 </div>
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

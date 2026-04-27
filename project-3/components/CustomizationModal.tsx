@@ -2,6 +2,14 @@
 
 import { useState } from 'react';
 import { MenuItem, CartItem, currencyFormatter, supportsHot } from './pos-types';
+import {
+  AVAILABLE_TOPPINGS,
+  formatToppings,
+  getToppingsCost,
+  NO_TOPPING,
+  parseToppings,
+  TOPPING_COSTS,
+} from '@/lib/toppings';
 
 type Props = {
   item: MenuItem;
@@ -13,22 +21,13 @@ type Props = {
   initialTemperature?: 'Hot' | 'Cold';
   confirmLabel?: string;
   presentation?: 'dialog' | 'fullscreen';
+  showDialogImage?: boolean;
 };
 
 const ICE_LEVELS = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
 const SUGAR_LEVELS = ['0%', '25%', '50%', '75%', '100%', '125%'];
 const DEFAULT_ICE_LEVEL = 'Regular Ice';
 const DEFAULT_SUGAR_LEVEL = '100%';
-const DEFAULT_TOPPING = 'None';
-const TOPPING_COSTS: Record<string, number> = {
-  None: 0,
-  Boba: 0.5,
-  Pudding: 0.6,
-  'Grass Jelly': 0.5,
-  'Red Bean': 0.5,
-  'Aloe Vera': 0.7,
-};
-const TOPPINGS = Object.keys(TOPPING_COSTS);
 
 export default function CustomizationModal({
   item,
@@ -40,19 +39,29 @@ export default function CustomizationModal({
   initialTemperature,
   confirmLabel,
   presentation = 'dialog',
+  showDialogImage = true,
 }: Props) {
   const hotEligible = supportsHot(item.name);
 
   const [iceLevel, setIceLevel] = useState(initialIceLevel ?? DEFAULT_ICE_LEVEL);
   const [sugarLevel, setSugarLevel] = useState(initialSugarLevel ?? DEFAULT_SUGAR_LEVEL);
-  const [topping, setTopping] = useState(initialTopping ?? DEFAULT_TOPPING);
+  const [selectedToppings, setSelectedToppings] = useState(() => parseToppings(initialTopping));
   // Default to 'Cold' if not hot-eligible, otherwise respect initialTemperature or default 'Cold'
   const [temperature, setTemperature] = useState<'Hot' | 'Cold'>(
     !hotEligible ? 'Cold' : (initialTemperature ?? 'Cold')
   );
 
-  const toppingCost = TOPPING_COSTS[topping] || 0;
+  const topping = formatToppings(selectedToppings);
+  const toppingCost = getToppingsCost(selectedToppings);
   const totalCost = item.cost + toppingCost;
+
+  const toggleTopping = (toppingName: string) => {
+    setSelectedToppings((current) =>
+      current.includes(toppingName)
+        ? current.filter((selected) => selected !== toppingName)
+        : [...current, toppingName]
+    );
+  };
 
   const handleConfirm = () => {
     onConfirm({
@@ -187,13 +196,23 @@ export default function CustomizationModal({
                   <section className="rounded-[32px] bg-white p-8 shadow-sm ring-1 ring-[#eadfce]">
                     <h3 id="toppings-heading-fullscreen" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Toppings</h3>
                     <div className="mt-6 flex flex-wrap gap-4" role="group" aria-labelledby="toppings-heading-fullscreen">
-                      {TOPPINGS.map((t_name) => (
+                      <button
+                        key={NO_TOPPING}
+                        onClick={() => setSelectedToppings([])}
+                        aria-pressed={selectedToppings.length === 0}
+                        className={`min-h-[56px] rounded-full px-8 py-3 text-lg font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
+                          selectedToppings.length === 0 ? 'bg-[#2f7a5f] text-white shadow-xl' : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
+                        }`}
+                      >
+                        {NO_TOPPING}
+                      </button>
+                      {AVAILABLE_TOPPINGS.map((t_name) => (
                         <button
                           key={t_name}
-                          onClick={() => setTopping(t_name)}
-                          aria-pressed={topping === t_name}
+                          onClick={() => toggleTopping(t_name)}
+                          aria-pressed={selectedToppings.includes(t_name)}
                           className={`min-h-[56px] rounded-full px-8 py-3 text-lg font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
-                            topping === t_name ? 'bg-[#2f7a5f] text-white shadow-xl' : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
+                            selectedToppings.includes(t_name) ? 'bg-[#2f7a5f] text-white shadow-xl' : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                           }`}
                         >
                           {t_name}
@@ -230,7 +249,8 @@ export default function CustomizationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="customization-title-dialog" aria-describedby="customization-price-dialog">
-      <div className="w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+      <div className="relative w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+        {showDialogImage ? (
         <header className="relative h-56 w-full bg-[#f8f1e7]">
           {item.image_url ? (
             <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
@@ -247,9 +267,20 @@ export default function CustomizationModal({
             </svg>
           </button>
         </header>
+        ) : (
+          <button
+            onClick={onClose}
+            className="absolute right-5 top-5 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-[#f8f1e7] text-[#1f2520] shadow-md hover:bg-[#eadfce] transition-colors focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
+            aria-label="Close customization"
+          >
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
 
         <main className="p-8">
-          <h2 id="customization-title-dialog" className="text-3xl font-bold text-[#1f2520]">{item.name}</h2>
+          <h2 id="customization-title-dialog" className="pr-14 text-3xl font-bold text-[#1f2520]">{item.name}</h2>
           <div className="flex items-center gap-3 mt-2">
             <p id="customization-price-dialog" className="text-2xl font-bold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
             {toppingCost > 0 && (
@@ -307,13 +338,23 @@ export default function CustomizationModal({
             <div>
               <h3 id="toppings-heading-dialog" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Toppings</h3>
               <div className="mt-3 flex flex-wrap gap-3" role="group" aria-labelledby="toppings-heading-dialog">
-                {TOPPINGS.map((t_name) => (
+                <button
+                  key={NO_TOPPING}
+                  onClick={() => setSelectedToppings([])}
+                  aria-pressed={selectedToppings.length === 0}
+                  className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
+                    selectedToppings.length === 0 ? 'bg-[#2f7a5f] text-white shadow-md' : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
+                  }`}
+                >
+                  {NO_TOPPING}
+                </button>
+                {AVAILABLE_TOPPINGS.map((t_name) => (
                   <button
                     key={t_name}
-                    onClick={() => setTopping(t_name)}
-                    aria-pressed={topping === t_name}
+                    onClick={() => toggleTopping(t_name)}
+                    aria-pressed={selectedToppings.includes(t_name)}
                     className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
-                      topping === t_name ? 'bg-[#2f7a5f] text-white shadow-md' : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
+                      selectedToppings.includes(t_name) ? 'bg-[#2f7a5f] text-white shadow-md' : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
                     }`}
                   >
                     {t_name}
