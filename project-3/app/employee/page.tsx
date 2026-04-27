@@ -377,6 +377,7 @@ function EmployeePOSContent() {
           confirmLabel={
             modalState.mode === 'edit' ? 'Save Changes' : 'Add to Order'
           }
+          showDialogImage={false}
         />
       )}
 

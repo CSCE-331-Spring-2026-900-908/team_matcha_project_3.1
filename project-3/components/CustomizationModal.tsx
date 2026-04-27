@@ -12,6 +12,7 @@ type Props = {
   initialTopping?: string;
   confirmLabel?: string;
   presentation?: 'dialog' | 'fullscreen';
+  showDialogImage?: boolean;
 };
 
 const ICE_LEVELS = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
@@ -22,10 +23,8 @@ const DEFAULT_TOPPING = 'None';
 const TOPPING_COSTS: Record<string, number> = {
   None: 0,
   Boba: 0.5,
-  Pudding: 0.6,
-  'Grass Jelly': 0.5,
+  Honey: 0.5,
   'Red Bean': 0.5,
-  'Aloe Vera': 0.7,
 };
 const TOPPINGS = Object.keys(TOPPING_COSTS);
 
@@ -38,10 +37,15 @@ export default function CustomizationModal({
   initialTopping,
   confirmLabel,
   presentation = 'dialog',
+  showDialogImage = true,
 }: Props) {
   const [iceLevel, setIceLevel] = useState(initialIceLevel ?? DEFAULT_ICE_LEVEL);
   const [sugarLevel, setSugarLevel] = useState(initialSugarLevel ?? DEFAULT_SUGAR_LEVEL);
-  const [topping, setTopping] = useState(initialTopping ?? DEFAULT_TOPPING);
+  const [topping, setTopping] = useState(
+    initialTopping && initialTopping in TOPPING_COSTS
+      ? initialTopping
+      : DEFAULT_TOPPING
+  );
 
   const toppingCost = TOPPING_COSTS[topping] || 0;
   const totalCost = item.cost + toppingCost;
@@ -229,14 +233,27 @@ export default function CustomizationModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="customization-title-dialog" aria-describedby="customization-price-dialog">
-      <div className="w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
-        <header className="relative h-56 w-full bg-[#f8f1e7]">
-          {item.image_url ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm animate-fade-in sm:p-4" role="dialog" aria-modal="true" aria-labelledby="customization-title-dialog" aria-describedby="customization-price-dialog" onClick={onClose}>
+      <div className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl animate-scale-in sm:max-h-[calc(100vh-2rem)] sm:rounded-[32px]" onClick={(event) => event.stopPropagation()}>
+        <header className={`${showDialogImage ? 'h-56' : 'min-h-0 border-b border-[#eadfce] px-5 py-4 pr-20 sm:px-8 sm:py-5'} relative shrink-0 w-full bg-[#f8f1e7]`}>
+          {!showDialogImage && (
+            <>
+              <h2 id="customization-title-dialog" className="text-2xl font-bold leading-tight text-[#1f2520] sm:text-3xl">{item.name}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <p id="customization-price-dialog" className="text-2xl font-bold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
+                {toppingCost > 0 && (
+                  <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1 text-sm font-bold text-[#4a554a]">
+                    Includes {currencyFormatter.format(toppingCost)} add-on
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+          {showDialogImage && (item.image_url ? (
             <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-7xl opacity-20" aria-hidden="true">🍵</div>
-          )}
+          ))}
           <button
             onClick={onClose}
             className="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-[#1f2520] shadow-md hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
@@ -248,18 +265,22 @@ export default function CustomizationModal({
           </button>
         </header>
 
-        <main className="p-8">
-          <h2 id="customization-title-dialog" className="text-3xl font-bold text-[#1f2520]">{item.name}</h2>
-          <div className="flex items-center gap-3 mt-2">
-            <p id="customization-price-dialog" className="text-2xl font-bold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
-            {toppingCost > 0 && (
-              <span className="text-sm font-bold text-[#4a554a] bg-[#f8f1e7] px-3 py-1 rounded-full border border-[#eadfce]">
-                Includes {currencyFormatter.format(toppingCost)} add-on
-              </span>
-            )}
-          </div>
+        <main className="flex min-h-0 flex-1 flex-col">
+          {showDialogImage && (
+            <div className="px-5 pt-5 sm:px-8 sm:pt-6">
+              <h2 id="customization-title-dialog" className="text-3xl font-bold text-[#1f2520]">{item.name}</h2>
+              <div className="mt-2 flex items-center gap-3">
+                <p id="customization-price-dialog" className="text-2xl font-bold text-[#2f7a5f]">{currencyFormatter.format(totalCost)}</p>
+                {toppingCost > 0 && (
+                  <span className="text-sm font-bold text-[#4a554a] bg-[#f8f1e7] px-3 py-1 rounded-full border border-[#eadfce]">
+                    Includes {currencyFormatter.format(toppingCost)} add-on
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
-          <div className="mt-8 space-y-8 max-h-[50vh] overflow-y-auto pr-2">
+          <div className={`${showDialogImage ? 'mt-8' : ''} min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 pr-3 sm:space-y-8 sm:px-8 sm:py-6 sm:pr-5`}>
             {/* Ice Level */}
             <div>
               <h3 id="ice-level-heading-dialog" className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Ice Level</h3>
@@ -329,12 +350,14 @@ export default function CustomizationModal({
             </div>
           </div>
 
-          <button
-            onClick={handleConfirm}
-            className="mt-10 w-full min-h-[64px] rounded-[24px] bg-[#2f7a5f] py-5 text-xl font-bold text-white shadow-xl shadow-[#2f7a5f]/20 transition-all hover:bg-[#25634d] active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
-          >
-            {finalConfirmLabel}
-          </button>
+          <footer className="shrink-0 border-t border-[#eadfce] bg-white px-5 py-4 sm:px-8">
+            <button
+              onClick={handleConfirm}
+              className="w-full min-h-[56px] rounded-[20px] bg-[#2f7a5f] py-4 text-lg font-bold text-white shadow-xl shadow-[#2f7a5f]/20 transition-all hover:bg-[#25634d] active:scale-[0.98] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 sm:min-h-[64px] sm:rounded-[24px] sm:py-5 sm:text-xl"
+            >
+              {finalConfirmLabel}
+            </button>
+          </footer>
         </main>
       </div>
     </div>
