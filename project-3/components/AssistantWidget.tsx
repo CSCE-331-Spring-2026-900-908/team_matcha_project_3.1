@@ -27,9 +27,9 @@ type Props = {
 };
 
 const quickPrompts = [
-  'What is popular?',
-  'Show me mango drinks',
-  'What toppings do you have?',
+  { label: 'Popular drinks', message: 'What is popular?', action: 'popular' },
+  { label: "Today's Recommendation", message: 'Add today weather pick', action: 'weather-recommendation' },
+  { label: 'Available toppings', message: 'What toppings do you have?', action: 'toppings' },
 ];
 
 function ChatIcon() {
@@ -112,7 +112,7 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
     }
   };
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, action?: string) => {
     const trimmed = content.trim();
     if (!trimmed || isSending) return;
 
@@ -136,6 +136,7 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action,
           messages: [
             ...apiMessages,
             {
@@ -234,13 +235,13 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {quickPrompts.map((prompt) => (
                 <button
-                  key={prompt}
+                  key={prompt.label}
                   type="button"
-                  onClick={() => sendMessage(prompt)}
+                  onClick={() => sendMessage(prompt.message, prompt.action)}
                   disabled={isSending}
-                  className="shrink-0 rounded-full border border-[#d7e3d5] bg-[#f4f8f3] px-3 py-2 text-xs font-bold text-[#2f7a5f] transition hover:bg-[#e8f0e6] disabled:opacity-50"
+                  className="min-h-[38px] shrink-0 rounded-full border border-[#d7e3d5] bg-[#f4f8f3] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#e8f0e6] disabled:opacity-50"
                 >
-                  {prompt}
+                  {prompt.label}
                 </button>
               ))}
             </div>

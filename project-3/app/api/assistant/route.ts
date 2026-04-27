@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAssistantCartItems,
+  createWeatherRecommendedCartItem,
   getAssistantMenu,
   getAssistantToppings,
   searchAssistantMenu,
@@ -18,6 +19,8 @@ type FunctionCall = {
   name: string;
   args?: Record<string, unknown>;
 };
+
+type AssistantAction = 'popular' | 'toppings' | 'weather-recommendation';
 
 const configuredModel = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 const model = configuredModel.replace(/^models\//, '');
@@ -142,6 +145,15 @@ const functionDeclarations = [
       required: ['itemName'],
     },
   },
+  {
+    name: 'add_weather_recommended_drink',
+    description:
+      'Add the recommended drink of the day based on current local weather. This creates a cart addition only and does not place an order.',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ];
 
 function toGeminiContents(messages: AssistantMessage[]) {
@@ -224,9 +236,19 @@ function getFunctionCalls(response: {
 }
 
 function formatToolReply(toolResults: { name: string; response: unknown }[]) {
+  const weatherCartResult = toolResults.find((result) => result.name === 'add_weather_recommended_drink')
+    ?.response as
+    | { message?: string; reason?: string; cartItems?: AssistantCartItem[] }
+    | undefined;
   const cartResult = toolResults.find((result) => result.name === 'add_to_cart')?.response as
     | { message?: string; cartItems?: AssistantCartItem[] }
     | undefined;
+
+  if (weatherCartResult?.cartItems?.length) {
+    return `${weatherCartResult.message ?? 'Added the weather recommendation to your cart.'} ${
+      weatherCartResult.reason ?? ''
+    } You can review it before placing the order.`;
+  }
 
   if (cartResult?.cartItems?.length) {
     return `${cartResult.message ?? 'Added the item to your cart.'} You can review it before placing the order.`;
@@ -303,6 +325,11 @@ async function runTool(call: FunctionCall) {
           topping: typeof args.topping === 'string' ? args.topping : undefined,
         }),
       };
+    case 'add_weather_recommended_drink':
+      return {
+        name: call.name,
+        response: await createWeatherRecommendedCartItem(),
+      };
     default:
       return {
         name: call.name,
@@ -316,6 +343,19 @@ async function runTool(call: FunctionCall) {
 async function fallbackAssistant(message: string) {
   const cartItems: AssistantCartItem[] = [];
   const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes('recommended drink of the day') ||
+    (normalized.includes('weather') && normalized.includes('add'))
+  ) {
+    const result = await createWeatherRecommendedCartItem();
+    cartItems.push(...result.cartItems);
+
+    return {
+      reply: `${result.message} ${result.reason} You can review it before placing the order.`,
+      cartItems,
+    };
+  }
 
   if (normalized.includes('add')) {
     const menu = await getAssistantMenu();
@@ -351,14 +391,53 @@ async function fallbackAssistant(message: string) {
   };
 }
 
+async function handleDirectAction(action: AssistantAction) {
+  if (action === 'weather-recommendation') {
+    const result = await createWeatherRecommendedCartItem();
+
+    return {
+      reply: `${result.message} ${result.reason} You can review it before placing the order.`,
+      cartItems: result.cartItems,
+    };
+  }
+
+  if (action === 'toppings') {
+    const toppings = await getAssistantToppings();
+
+    return {
+      reply: `Available toppings include ${toppings.map((item) => item.name).join(', ')}.`,
+      cartItems: [],
+    };
+  }
+
+  const menu = await getAssistantMenu();
+  const popularItems = menu.filter((item) => item.tag === 'Popular').slice(0, 4);
+  const fallbackItems = popularItems.length > 0 ? popularItems : menu.slice(0, 4);
+
+  return {
+    reply: `Popular picks include ${fallbackItems
+      .map((item) => `${item.name} ($${item.cost.toFixed(2)})`)
+      .join(', ')}. Tell me which one you want to add.`,
+    cartItems: [],
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { messages?: AssistantMessage[] };
+    const body = (await request.json()) as { action?: AssistantAction; messages?: AssistantMessage[] };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user');
 
     if (!latestUserMessage?.content.trim()) {
       return NextResponse.json({ reply: 'Ask me about the menu or tell me what to add to the cart.', cartItems: [] });
+    }
+
+    if (
+      body.action === 'popular' ||
+      body.action === 'toppings' ||
+      body.action === 'weather-recommendation'
+    ) {
+      return NextResponse.json(await handleDirectAction(body.action));
     }
 
     if (!process.env.GEMINI_API_KEY) {

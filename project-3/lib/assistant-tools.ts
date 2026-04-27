@@ -1,6 +1,7 @@
 import { getInventoryItems } from '@/lib/inventory';
 import { getMenuItems, type MenuItem } from '@/lib/menu';
 import { MENU_EXTRAS } from '@/lib/menu-data';
+import { loadWeatherSnapshot } from '@/lib/weather';
 
 export type AssistantCartItem = MenuItem & {
   quantity: number;
@@ -138,5 +139,117 @@ export async function createAssistantCartItems(input: {
     cartItems: [cartItem],
     matchedItem,
     message: `Added ${quantity} ${matchedItem.name} to the cart draft.`,
+  };
+}
+
+function pickWeatherRecommendedItem(
+  items: MenuSearchResult[],
+  weather: {
+    current: {
+      temperatureF: number | null;
+      condition: string;
+    };
+  } | null
+) {
+  if (items.length === 0) return null;
+
+  const currentTemp = weather?.current.temperatureF;
+  const condition = weather?.current.condition.toLowerCase() ?? '';
+
+  const findByKeywords = (keywords: string[]) =>
+    items.find((item) => keywords.some((keyword) => item.name.toLowerCase().includes(keyword)));
+
+  if (condition.includes('rain') || condition.includes('drizzle') || condition.includes('thunderstorm')) {
+    return findByKeywords(['latte', 'milk', 'matcha']) ?? items[0];
+  }
+
+  if (condition.includes('snow') || condition.includes('fog')) {
+    return findByKeywords(['latte', 'milk', 'tea']) ?? items[0];
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp >= 82) {
+    return findByKeywords(['fruit', 'mango', 'strawberry', 'tea']) ?? items[0];
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp <= 55) {
+    return findByKeywords(['matcha', 'latte', 'milk']) ?? items[0];
+  }
+
+  return findByKeywords(['matcha', 'tea', 'milk']) ?? items[0];
+}
+
+function getWeatherRecommendationReason(
+  weather: {
+    current: {
+      temperatureF: number | null;
+      condition: string;
+    };
+  } | null
+) {
+  const currentTemp = weather?.current.temperatureF;
+  const condition = weather?.current.condition.toLowerCase() ?? '';
+
+  if (condition.includes('rain') || condition.includes('thunderstorm')) {
+    return 'Rainy weather calls for something smoother and more comforting.';
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp >= 82) {
+    return 'Warm weather makes a lighter, refreshing drink a strong pick.';
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp <= 55) {
+    return 'Cool weather makes a richer, cozier drink feel right.';
+  }
+
+  return 'Today feels like a good match for a balanced house favorite.';
+}
+
+export async function createWeatherRecommendedCartItem() {
+  const menu = (await getMenuItems()).map(withMenuDetails);
+  let weather = null;
+
+  try {
+    weather = await loadWeatherSnapshot({
+      latitude: 30.628,
+      longitude: -96.3344,
+      timezone: 'America/Chicago',
+      forecastDays: 3,
+      locationLabel: 'College Station, TX',
+    });
+  } catch {
+    weather = null;
+  }
+
+  const recommendedItem = pickWeatherRecommendedItem(menu, weather);
+
+  if (!recommendedItem) {
+    return {
+      cartItems: [],
+      matchedItem: null,
+      weather,
+      reason: 'No menu items were available for a weather recommendation.',
+      message: 'I could not find a drink to recommend right now.',
+    };
+  }
+
+  const cartItem: AssistantCartItem = {
+    menuid: recommendedItem.menuid,
+    name: recommendedItem.name,
+    cost: recommendedItem.cost,
+    image_url: recommendedItem.image_url,
+    quantity: 1,
+    iceLevel: 'Regular Ice',
+    sugarLevel: '100%',
+    topping: 'None',
+  };
+
+  const reason = getWeatherRecommendationReason(weather);
+
+  return {
+    cartItems: [cartItem],
+    matchedItem: recommendedItem,
+    weather,
+    reason,
+    message: `Added ${recommendedItem.name}, today's weather-based recommendation.`,
   };
 }
