@@ -27,9 +27,9 @@ type Props = {
 };
 
 const quickPrompts = [
-  'What is popular?',
-  'Show me mango drinks',
-  'What toppings do you have?',
+  { label: 'Popular drinks', message: 'What drinks are popular?', action: 'popular' },
+  { label: "Today's Recommendation", message: 'Add today\'s drink recommendation.', action: 'weather-recommendation' },
+  { label: 'Available toppings', message: 'What toppings do you have?', action: 'toppings' },
 ];
 
 function ChatIcon() {
@@ -112,7 +112,7 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
     }
   };
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, action?: string) => {
     const trimmed = content.trim();
     if (!trimmed || isSending) return;
 
@@ -136,6 +136,7 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          action,
           messages: [
             ...apiMessages,
             {
@@ -234,13 +235,13 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {quickPrompts.map((prompt) => (
                 <button
-                  key={prompt}
+                  key={prompt.label}
                   type="button"
-                  onClick={() => sendMessage(prompt)}
+                  onClick={() => sendMessage(prompt.message, prompt.action)}
                   disabled={isSending}
-                  className="shrink-0 rounded-full border border-[#d7e3d5] bg-[#f4f8f3] px-3 py-2 text-xs font-bold text-[#2f7a5f] transition hover:bg-[#e8f0e6] disabled:opacity-50"
+                  className="min-h-[38px] shrink-0 rounded-full border border-[#d7e3d5] bg-[#f4f8f3] px-4 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#e8f0e6] disabled:opacity-50"
                 >
-                  {prompt}
+                  {prompt.label}
                 </button>
               ))}
             </div>
@@ -280,14 +281,26 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="group flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#6d4a13] bg-[#d9a441] text-[#1f2520] shadow-[0_14px_34px_rgba(109,74,19,0.28)] transition-colors hover:bg-[#e5b95b] focus:outline-none focus:ring-4 focus:ring-[#d9a441]/35"
+        className="group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[#6d4a13] bg-[linear-gradient(135deg,#9a6718_0%,#f4cf72_28%,#c78f28_52%,#ffe19a_72%,#9f6815_100%)] text-[#1f2520] shadow-[0_14px_34px_rgba(109,74,19,0.28)] transition-colors before:absolute before:inset-y-[-35%] before:left-[-100%] before:w-16 before:rotate-12 before:bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.95)_48%,transparent_100%)] before:blur-[2px] before:content-[''] hover:before:animate-[assistant-sheen_760ms_ease-out_forwards] focus:outline-none focus:ring-4 focus:ring-[#d9a441]/35"
         aria-label={isOpen ? 'Close assistant' : 'Open assistant'}
       >
-        <ChatIcon />
+        <span className="relative z-10">
+          <ChatIcon />
+        </span>
         <span className="pointer-events-none absolute bottom-full left-0 mb-3 hidden whitespace-nowrap rounded-full bg-[#1f2520] px-4 py-2 text-xs font-bold text-white shadow-lg group-hover:block">
           Ask Assistant
         </span>
       </button>
+      <style jsx>{`
+        @keyframes assistant-sheen {
+          from {
+            transform: translateX(0) rotate(12deg);
+          }
+          to {
+            transform: translateX(220px) rotate(12deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

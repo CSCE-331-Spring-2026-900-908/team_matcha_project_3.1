@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createAssistantCartItems,
+  createWeatherRecommendedCartItem,
   getAssistantMenu,
   getAssistantToppings,
   searchAssistantMenu,
@@ -19,20 +20,64 @@ type FunctionCall = {
   args?: Record<string, unknown>;
 };
 
-const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const thinkingLevel = process.env.GEMINI_THINKING_LEVEL || 'minimal';
-const thinkingBudget = Number(process.env.GEMINI_THINKING_BUDGET ?? 0);
+type AssistantAction = 'popular' | 'toppings' | 'weather-recommendation';
 
-function getThinkingConfig() {
-  if (model.startsWith('gemini-3')) {
-    return {
-      thinkingLevel,
-    };
+const configuredModel = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
+const model = configuredModel.replace(/^models\//, '');
+const fallbackModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+const failedModelCooldowns = new Map<string, number>();
+
+function getNextPacificMidnightTime() {
+  const now = new Date();
+  const pacificDateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const getPart = (type: string) =>
+    Number(pacificDateParts.find((part) => part.type === type)?.value);
+  const pacificYear = getPart('year');
+  const pacificMonth = getPart('month');
+  const pacificDay = getPart('day');
+  const nextPacificMidnightGuess = Date.UTC(pacificYear, pacificMonth - 1, pacificDay + 1, 8);
+  const pacificOffsetHours =
+    new Date(nextPacificMidnightGuess).toLocaleString('en-US', {
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'shortOffset',
+    }).includes('GMT-7')
+      ? 7
+      : 8;
+
+  return Date.UTC(pacificYear, pacificMonth - 1, pacificDay + 1, pacificOffsetHours);
+}
+
+function getCooldownUntil(status: number) {
+  if (status === 404) return Date.now() + 24 * 60 * 60 * 1000;
+  if (status === 429) return getNextPacificMidnightTime();
+  if (status === 503) return Date.now() + 30 * 60 * 1000;
+
+  return Date.now() + 5 * 60 * 1000;
+}
+
+function isModelCoolingDown(candidateModel: string) {
+  const cooldownUntil = failedModelCooldowns.get(candidateModel);
+
+  if (!cooldownUntil) return false;
+
+  if (Date.now() >= cooldownUntil) {
+    failedModelCooldowns.delete(candidateModel);
+    return false;
   }
 
-  return {
-    thinkingBudget,
-  };
+  return true;
+}
+
+function getModelCandidates() {
+  return [model, ...fallbackModels].filter(
+    (candidate, index, candidates) =>
+      candidates.indexOf(candidate) === index && !isModelCoolingDown(candidate)
+  );
 }
 
 const functionDeclarations = [
@@ -100,6 +145,15 @@ const functionDeclarations = [
       required: ['itemName'],
     },
   },
+  {
+    name: 'add_weather_recommended_drink',
+    description:
+      'Add the recommended drink of the day based on current local weather. This creates a cart addition only and does not place an order.',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ];
 
 function toGeminiContents(messages: AssistantMessage[]) {
@@ -116,38 +170,50 @@ async function callGemini(contents: unknown[]) {
     throw new Error('Missing GEMINI_API_KEY.');
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [
-            {
-              text:
-                'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. Be concise and friendly.',
-            },
-          ],
-        },
-        contents,
-        tools: [{ functionDeclarations }],
-        generationConfig: {
-          temperature: 0.4,
-          thinkingConfig: getThinkingConfig(),
-        },
-      }),
-    }
-  );
+  const errors: string[] = [];
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini request failed: ${errorText}`);
+  const modelCandidates = getModelCandidates();
+
+  if (modelCandidates.length === 0) {
+    failedModelCooldowns.clear();
   }
 
-  return response.json();
+  for (const candidateModel of modelCandidates.length > 0 ? modelCandidates : getModelCandidates()) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${candidateModel}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [
+              {
+                text:
+                  'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. Be concise and friendly.',
+              },
+            ],
+          },
+          contents,
+          tools: [{ functionDeclarations }],
+          generationConfig: {
+            temperature: 0.4,
+          },
+        }),
+      }
+    );
+
+    if (response.ok) {
+      return response.json();
+    }
+
+    const errorText = await response.text();
+    errors.push(`${candidateModel}: ${errorText}`);
+    failedModelCooldowns.set(candidateModel, getCooldownUntil(response.status));
+  }
+
+  throw new Error(`Gemini request failed for all configured models: ${errors.join(' | ')}`);
 }
 
 function getText(response: { candidates?: { content?: { parts?: { text?: string }[] } }[] }) {
@@ -167,6 +233,60 @@ function getFunctionCalls(response: {
       ?.map((part) => part.functionCall)
       .filter((call): call is FunctionCall => Boolean(call?.name)) || []
   );
+}
+
+function formatToolReply(toolResults: { name: string; response: unknown }[]) {
+  const weatherCartResult = toolResults.find((result) => result.name === 'add_weather_recommended_drink')
+    ?.response as
+    | { message?: string; reason?: string; cartItems?: AssistantCartItem[] }
+    | undefined;
+  const cartResult = toolResults.find((result) => result.name === 'add_to_cart')?.response as
+    | { message?: string; cartItems?: AssistantCartItem[] }
+    | undefined;
+
+  if (weatherCartResult?.cartItems?.length) {
+    return `${weatherCartResult.message ?? 'Added the weather recommendation to your cart.'} ${
+      weatherCartResult.reason ?? ''
+    } You can review it before placing the order.`;
+  }
+
+  if (cartResult?.cartItems?.length) {
+    return `${cartResult.message ?? 'Added the item to your cart.'} You can review it before placing the order.`;
+  }
+
+  const searchResult = toolResults.find((result) => result.name === 'search_menu')?.response as
+    | { results?: { name: string; cost: number; description?: string }[] }
+    | undefined;
+
+  if (searchResult?.results?.length) {
+    return `I found ${searchResult.results
+      .slice(0, 3)
+      .map((item) => `${item.name} ($${item.cost.toFixed(2)})`)
+      .join(', ')}. Tell me which one you want to add.`;
+  }
+
+  const menuResult = toolResults.find((result) => result.name === 'get_menu')?.response as
+    | { menu?: { name: string; cost: number }[] }
+    | undefined;
+
+  if (menuResult?.menu?.length) {
+    return `The menu has options like ${menuResult.menu
+      .slice(0, 5)
+      .map((item) => `${item.name} ($${item.cost.toFixed(2)})`)
+      .join(', ')}.`;
+  }
+
+  const toppingsResult = toolResults.find((result) => result.name === 'get_toppings')?.response as
+    | { toppings?: { name: string; cost: number }[] }
+    | undefined;
+
+  if (toppingsResult?.toppings?.length) {
+    return `Available toppings include ${toppingsResult.toppings
+      .map((item) => item.name)
+      .join(', ')}.`;
+  }
+
+  return 'I can help with menu info and adding drinks to your cart.';
 }
 
 async function runTool(call: FunctionCall) {
@@ -205,6 +325,11 @@ async function runTool(call: FunctionCall) {
           topping: typeof args.topping === 'string' ? args.topping : undefined,
         }),
       };
+    case 'add_weather_recommended_drink':
+      return {
+        name: call.name,
+        response: await createWeatherRecommendedCartItem(),
+      };
     default:
       return {
         name: call.name,
@@ -218,6 +343,19 @@ async function runTool(call: FunctionCall) {
 async function fallbackAssistant(message: string) {
   const cartItems: AssistantCartItem[] = [];
   const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes('recommended drink of the day') ||
+    (normalized.includes('weather') && normalized.includes('add'))
+  ) {
+    const result = await createWeatherRecommendedCartItem();
+    cartItems.push(...result.cartItems);
+
+    return {
+      reply: `${result.message} ${result.reason} You can review it before placing the order.`,
+      cartItems,
+    };
+  }
 
   if (normalized.includes('add')) {
     const menu = await getAssistantMenu();
@@ -253,14 +391,53 @@ async function fallbackAssistant(message: string) {
   };
 }
 
+async function handleDirectAction(action: AssistantAction) {
+  if (action === 'weather-recommendation') {
+    const result = await createWeatherRecommendedCartItem();
+
+    return {
+      reply: `${result.message} ${result.reason} You can review it before placing the order.`,
+      cartItems: result.cartItems,
+    };
+  }
+
+  if (action === 'toppings') {
+    const toppings = await getAssistantToppings();
+
+    return {
+      reply: `Available toppings include ${toppings.map((item) => item.name).join(', ')}.`,
+      cartItems: [],
+    };
+  }
+
+  const menu = await getAssistantMenu();
+  const popularItems = menu.filter((item) => item.tag === 'Popular').slice(0, 4);
+  const fallbackItems = popularItems.length > 0 ? popularItems : menu.slice(0, 4);
+
+  return {
+    reply: `Popular picks include ${fallbackItems
+      .map((item) => `${item.name} ($${item.cost.toFixed(2)})`)
+      .join(', ')}. Tell me which one you want to add.`,
+    cartItems: [],
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { messages?: AssistantMessage[] };
+    const body = (await request.json()) as { action?: AssistantAction; messages?: AssistantMessage[] };
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user');
 
     if (!latestUserMessage?.content.trim()) {
       return NextResponse.json({ reply: 'Ask me about the menu or tell me what to add to the cart.', cartItems: [] });
+    }
+
+    if (
+      body.action === 'popular' ||
+      body.action === 'toppings' ||
+      body.action === 'weather-recommendation'
+    ) {
+      return NextResponse.json(await handleDirectAction(body.action));
     }
 
     if (!process.env.GEMINI_API_KEY) {
@@ -304,7 +481,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      reply: getText(secondResponse) || toolResults.map((result) => result.response).join('\n'),
+      reply: getText(secondResponse) || formatToolReply(toolResults),
       cartItems,
     });
   } catch (error) {
