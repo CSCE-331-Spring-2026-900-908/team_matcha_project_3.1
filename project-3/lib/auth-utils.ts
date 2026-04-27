@@ -5,8 +5,9 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export interface JWTPayload {
   userId: number;
+  employeeId?: number | null;
   email: string;
-  role: 'employee' | 'manager';
+  role: 'employee' | 'manager' | 'customer';
   name: string;
 }
 

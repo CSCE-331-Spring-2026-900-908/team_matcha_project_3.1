@@ -27,7 +27,6 @@ const ICE_LEVELS = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
 const SUGAR_LEVELS = ['0%', '25%', '50%', '75%', '100%', '125%'];
 const DEFAULT_ICE_LEVEL = 'Regular Ice';
 const DEFAULT_SUGAR_LEVEL = '100%';
-
 export default function CustomizationModal({
   item,
   onClose,

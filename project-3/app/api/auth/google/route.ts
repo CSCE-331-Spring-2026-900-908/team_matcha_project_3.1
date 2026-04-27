@@ -20,15 +20,23 @@ export async function POST(req: NextRequest) {
     const client = await pool.connect();
     try {
       const userResult = await client.query(
-        `SELECT id, google_id, email, name, role
-         FROM app_users
+        `SELECT
+           u.id,
+           u.google_id,
+           u.email,
+           COALESCE(e.name, u.name) AS name,
+           u.role,
+           u.employee_id
+         FROM app_users u
+         LEFT JOIN employees e
+           ON e.employeeid = u.employee_id
          WHERE google_id = $1 OR LOWER(email) = LOWER($2)
          ORDER BY CASE WHEN google_id = $1 THEN 0 ELSE 1 END
          LIMIT 1`,
         [googleId, email]
       );
 
-let user = userResult.rows.length > 0 ? userResult.rows[0] : null;
+      let user = userResult.rows.length > 0 ? userResult.rows[0] : null;
 
       if (userResult.rows.length === 0) {
         if (source !== 'kiosk') {
@@ -39,7 +47,9 @@ let user = userResult.rows.length > 0 ? userResult.rows[0] : null;
         }
         // Kiosk customers can self-register
         const insertResult = await client.query(
-          'INSERT INTO app_users (google_id, email, name, role) VALUES ($1, $2, $3, $4) RETURNING id, google_id, email, name, role',
+          `INSERT INTO app_users (google_id, email, name, role, employee_id)
+           VALUES ($1, $2, $3, $4, NULL)
+           RETURNING id, google_id, email, name, role, employee_id`,
           [googleId, email, name, 'customer']
         );
         user = insertResult.rows[0];
@@ -51,22 +61,25 @@ let user = userResult.rows.length > 0 ? userResult.rows[0] : null;
 
       if (
         user.google_id !== googleId ||
-        user.email !== email ||
-        user.name !== (name || user.name)
+        user.email !== email
       ) {
         const updatedUserResult = await client.query(
           `UPDATE app_users
-           SET google_id = $1, email = $2, name = $3
-           WHERE id = $4
-           RETURNING id, google_id, email, name, role`,
-          [googleId, email, name || user.name, user.id]
+           SET google_id = $1, email = $2
+           WHERE id = $3
+           RETURNING id, google_id, email, name, role, employee_id`,
+          [googleId, email, user.id]
         );
-        user = updatedUserResult.rows[0];
+        user = {
+          ...updatedUserResult.rows[0],
+          name: user.name,
+        };
       }
 
       // 3. Generate Session JWT
       const token = signToken({
         userId: user.id,
+        employeeId: user.employee_id ?? null,
         email: user.email,
         role: user.role,
         name: user.name || '',
@@ -78,6 +91,7 @@ let user = userResult.rows.length > 0 ? userResult.rows[0] : null;
           name: user.name,
           email: user.email,
           role: user.role,
+          employeeId: user.employee_id ?? null,
         },
       });
     } finally {

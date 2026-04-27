@@ -14,11 +14,6 @@ import {
   type CartItem,
 } from '@/components/pos-types';
 
-type Employee = {
-  employeeid: number;
-  name: string;
-};
-
 type ModalState =
   | { mode: 'add'; item: MenuItem }
   | { mode: 'edit'; item: CartItem; index: number };
@@ -42,11 +37,7 @@ function EmployeePOSContent() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [modalState, setModalState] = useState<ModalState | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
-    null
-  );
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<number | null>(null);
@@ -55,26 +46,25 @@ function EmployeePOSContent() {
     // Capture user role for conditional UI
     setUserRole(localStorage.getItem('user_role'));
 
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1])) as {
+          employeeId?: number | null;
+        };
+        setCurrentEmployeeId(payload.employeeId ?? null);
+      } catch {
+        setCurrentEmployeeId(null);
+      }
+    }
+
     async function loadData() {
       try {
-        // 1. Fetch Menu (Public)
+        // Fetch Menu (Public)
         const menuRes = await fetch('/api/menu');
         if (!menuRes.ok) throw new Error('Failed to load menu items.');
         const menuData = await menuRes.json();
         setItems(menuData);
-
-        // 2. Fetch Employees (Requires Auth)
-        const empRes = await authFetch('/api/employees');
-        if (empRes.status === 401) {
-          router.push('/login');
-          return;
-        }
-        if (!empRes.ok) {
-          const errData = await empRes.json().catch(() => ({}));
-          throw new Error(errData.error || `Error ${empRes.status}: Failed to load employees.`);
-        }
-        const empData = await empRes.json();
-        setEmployees(empData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
@@ -176,8 +166,8 @@ function EmployeePOSContent() {
   const costTotal = subtotal * 1.0825;
 
   const handlePlaceOrder = async () => {
-    if (!selectedEmployeeId) {
-      alert('Please select an employee before placing an order.');
+    if (!currentEmployeeId) {
+      alert('No employee record is linked to this account. Ask a manager to set up your employee profile.');
       return;
     }
     setIsPlacingOrder(true);
@@ -186,7 +176,7 @@ function EmployeePOSContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          employeeID: selectedEmployeeId,
+          employeeID: currentEmployeeId,
           customerName: customerName.trim() || null,
           costTotal: Math.round(costTotal * 100) / 100,
           items: cart.map((item) => ({
@@ -261,7 +251,7 @@ function EmployeePOSContent() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
-              {userRole === 'manager' && (
+            {userRole === 'manager' && (
                 <button
                   onClick={() => router.push('/manager')}
                   className="rounded-xl border border-[#2f7a5f] text-[#2f7a5f] px-4 py-2 text-sm font-semibold hover:bg-[#2f7a5f] hover:text-white transition-all shadow-sm"
@@ -269,20 +259,6 @@ function EmployeePOSContent() {
                   Manager View
                 </button>
               )}
-              <select
-                value={selectedEmployeeId ?? ''}
-                onChange={(e) =>
-                  setSelectedEmployeeId(Number(e.target.value) || null)
-                }
-                className="rounded-xl border border-[#eadfce] bg-[#f8f1e7] px-4 py-2 text-sm font-semibold text-[#2f241d] focus:outline-none focus:ring-2 focus:ring-[#2f7a5f]"
-              >
-                <option value="">Select Employee</option>
-                {employees.map((emp) => (
-                  <option key={emp.employeeid} value={emp.employeeid}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
               <button
                 onClick={handleLogout}
                 className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 
 type ForecastDay = {
   date: string;
@@ -29,25 +29,27 @@ export default function Home() {
   const [windSpeed, setWindSpeed] = useState<number | null>(null);
   const [currentCondition, setCurrentCondition] = useState<string | null>(null);
   const [forecast, setForecast] = useState<ForecastDay[]>([]);
-  const [weatherLocationLabel, setWeatherLocationLabel] = useState("College Station, TX");
+  const [weatherLocationLabel, setWeatherLocationLabel] = useState(
+    'College Station, TX'
+  );
 
   const portalLinks = [
     {
-      href: "/menu",
-      label: "Menu",
+      href: '/menu',
+      label: 'Menu',
     },
     {
-      href: "/employee",
-      label: "Employee",
+      href: '/employee',
+      label: 'Employee',
     },
     {
-      href: "/manager",
-      label: "Manager",
+      href: '/manager',
+      label: 'Manager',
     },
     {
-      href: "/kiosk",
-      label: "Kiosk",
-    }
+      href: '/kiosk',
+      label: 'Kiosk',
+    },
   ];
 
   useEffect(() => {
@@ -58,27 +60,35 @@ export default function Home() {
         setIsLoadingWeather(true);
         setWeatherError(null);
 
-        const response = await fetch("/api/weather");
+        const response = await fetch('/api/weather');
 
         if (!response.ok) {
-          throw new Error("Failed to load weather.");
+          throw new Error('Failed to load weather.');
         }
 
         const data: WeatherApiResponse = await response.json();
 
         if (isMounted) {
           setCurrentTemp(
-            typeof data.current?.temperatureF === "number" ? data.current.temperatureF : null
+            typeof data.current?.temperatureF === 'number'
+              ? data.current.temperatureF
+              : null
           );
-          setWindSpeed(typeof data.current?.windMph === "number" ? data.current.windMph : null);
-          setCurrentCondition(data.current?.condition ?? "Weather unavailable");
+          setWindSpeed(
+            typeof data.current?.windMph === 'number'
+              ? data.current.windMph
+              : null
+          );
+          setCurrentCondition(data.current?.condition ?? 'Weather unavailable');
           setForecast(Array.isArray(data.forecast) ? data.forecast : []);
-          setWeatherLocationLabel(data.location?.label || "College Station, TX");
+          setWeatherLocationLabel(
+            data.location?.label || 'College Station, TX'
+          );
         }
       } catch {
         if (isMounted) {
-          setWeatherError("Failed to load weather.");
-          setCurrentCondition("Weather unavailable");
+          setWeatherError('Failed to load weather.');
+          setCurrentCondition('Weather unavailable');
         }
       } finally {
         if (isMounted) {
@@ -96,10 +106,10 @@ export default function Home() {
 
   const dateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
+      new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
       }),
     []
   );
@@ -111,7 +121,7 @@ export default function Home() {
           <p className="text-base font-semibold uppercase tracking-[0.22em] text-[#4a554a]">
             Team Matcha POS
           </p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl text-[#1f2520]">
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-[#1f2520] sm:text-5xl">
             Portal
           </h1>
         </header>
@@ -122,7 +132,7 @@ export default function Home() {
               key={portalLink.href}
               href={portalLink.href}
               className={`flex min-h-[160px] items-center justify-center rounded-[24px] border border-[#b9c5b6] bg-white px-6 py-6 text-center shadow-[0_8px_24px_rgba(31,37,32,0.06)] transition hover:border-[#829080] hover:bg-[#f4f7f3] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 ${
-                portalLink.label === "Kiosk" ? "md:col-start-2" : ""
+                portalLink.label === 'Kiosk' ? 'md:col-start-2' : ''
               }`}
             >
               <h2 className="text-3xl font-bold text-[#1f2520]">
@@ -133,8 +143,12 @@ export default function Home() {
         </nav>
 
         <section className="mt-10 rounded-[24px] border border-[#b9c5b6] bg-white p-6 shadow-[0_8px_24px_rgba(31,37,32,0.06)]">
-          <h2 className="text-2xl font-bold text-[#1f2520]">Local Weather Forecast</h2>
-          <p className="mt-1 text-sm font-medium text-[#4a554a]">{weatherLocationLabel}</p>
+          <h2 className="text-2xl font-bold text-[#1f2520]">
+            Local Weather Forecast
+          </h2>
+          <p className="mt-1 text-sm font-medium text-[#4a554a]">
+            {weatherLocationLabel}
+          </p>
 
           {isLoadingWeather ? (
             <p className="mt-4 text-base text-[#4a554a]">Loading weather...</p>
@@ -149,26 +163,33 @@ export default function Home() {
           {!isLoadingWeather && !weatherError ? (
             <div className="mt-4">
               <div className="rounded-[18px] border border-[#dce5d8] bg-[#f8faf7] px-4 py-4">
-                <p className="text-sm uppercase tracking-[0.16em] text-[#4a554a]">Current conditions</p>
+                <p className="text-sm uppercase tracking-[0.16em] text-[#4a554a]">
+                  Current conditions
+                </p>
                 <p className="mt-2 text-3xl font-bold">
-                  {currentTemp !== null ? `${Math.round(currentTemp)}°F` : "Weather unavailable"}
+                  {currentTemp !== null
+                    ? `${Math.round(currentTemp)}°F`
+                    : 'Weather unavailable'}
                 </p>
                 <p className="mt-1 text-base text-[#4a554a]">
-                  {currentCondition ?? "Weather unavailable"}
-                  {windSpeed !== null ? ` • Wind ${Math.round(windSpeed)} mph` : ""}
+                  {currentCondition ?? 'Weather unavailable'}
+                  {windSpeed !== null ? ` • Wind ${Math.round(windSpeed)} mph` : ''}
                 </p>
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {forecast.map((day) => (
-                  <div key={day.date} className="rounded-[16px] border border-[#dce5d8] bg-white px-4 py-3">
+                  <div
+                    key={day.date}
+                    className="rounded-[16px] border border-[#dce5d8] bg-white px-4 py-3"
+                  >
                     <p className="text-sm font-semibold text-[#4a554a]">
                       {dateFormatter.format(new Date(`${day.date}T12:00:00`))}
                     </p>
                     <p className="mt-1 text-lg font-bold text-[#1f2520]">
                       {Math.round(day.maxTemp)}° / {Math.round(day.minTemp)}°
                     </p>
-                    <p className="mt-1 text-sm text-[#4a554a] break-words">
+                    <p className="mt-1 break-words text-sm text-[#4a554a]">
                       {day.condition}
                     </p>
                   </div>

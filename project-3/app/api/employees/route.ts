@@ -12,7 +12,8 @@ type EmployeeRequestBody = {
   employeeid?: unknown;
   name?: unknown;
   pay?: unknown;
-  job?: unknown;
+  email?: unknown;
+  role?: unknown;
 };
 
 function parseEmployeeid(value: unknown): number | null {
@@ -22,14 +23,15 @@ function parseEmployeeid(value: unknown): number | null {
 
 function parseEmployeeInput(body: EmployeeRequestBody): EmployeeInput | null {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
-  const job = typeof body.job === 'string' ? body.job.trim() : '';
   const pay = typeof body.pay === 'number' ? body.pay : Number(body.pay);
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const role = body.role === 'manager' || body.role === 'employee' ? body.role : null;
 
-  if (!name || !job || !Number.isFinite(pay) || pay < 0) {
+  if (!name || !email || !role || !Number.isFinite(pay) || pay < 0) {
     return null;
   }
 
-  return { name, pay, job };
+  return { name, pay, email, role };
 }
 
 async function readBody(request: NextRequest): Promise<EmployeeRequestBody | null> {
@@ -40,9 +42,8 @@ async function readBody(request: NextRequest): Promise<EmployeeRequestBody | nul
   }
 }
 
-// GET is allowed for both employees and managers (to see lists)
 export async function GET(req: NextRequest) {
-  return withAuth(req, ['employee', 'manager'], async () => {
+  return withAuth(req, ['manager'], async () => {
     try {
       const employees = await getEmployees();
       return NextResponse.json(employees);
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     if (!input) {
       return NextResponse.json(
-        { error: 'Name, job, and a non-negative pay value are required.' },
+        { error: 'Name, pay, email, and role are required.' },
         { status: 400 }
       );
     }
@@ -75,7 +76,12 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       console.error('Failed to create employee:', error);
       return NextResponse.json(
-        { error: 'Failed to create employee.' },
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to create employee.',
+        },
         { status: 500 }
       );
     }
@@ -92,7 +98,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'Employee ID, name, job, and a non-negative pay value are required.',
+            'Employee ID, name, pay, email, and role are required.',
         },
         { status: 400 }
       );
@@ -112,7 +118,12 @@ export async function PATCH(req: NextRequest) {
     } catch (error) {
       console.error('Failed to update employee:', error);
       return NextResponse.json(
-        { error: 'Failed to update employee.' },
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to update employee.',
+        },
         { status: 500 }
       );
     }

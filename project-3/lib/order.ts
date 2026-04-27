@@ -45,6 +45,13 @@ export async function createOrder(
     );
     const orderId = result.rows[0].orderid;
 
+    await connection.query(
+      `UPDATE employees
+       SET ordernum = COALESCE(ordernum, 0) + 1
+       WHERE employeeid = $1`,
+      [employeeID]
+    );
+
     await syncSequence(connection, 'order_items', 'id');
 
     for (const item of items) {
