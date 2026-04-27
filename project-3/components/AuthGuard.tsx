@@ -11,31 +11,28 @@ interface AuthGuardProps {
 export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    let authorizationTimer: number | undefined;
     const token = localStorage.getItem('auth_token');
     const role = localStorage.getItem('user_role') as 'employee' | 'manager';
 
     if (!token) {
-      router.push('/login');
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      router.push(`/login?returnTo=${encodeURIComponent(returnTo)}`);
     } else if (!allowedRoles.includes(role)) {
       if (role === 'manager') router.push('/manager');
       else router.push('/employee');
     } else {
-      setIsAuthorized(true);
+      authorizationTimer = window.setTimeout(() => setIsAuthorized(true), 0);
     }
-  }, [router, allowedRoles]);
 
-  // Avoid hydration mismatch by waiting for mount
-  if (!mounted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#fdfaf6] text-[#6f5848]">
-        Initializing...
-      </div>
-    );
-  }
+    return () => {
+      if (authorizationTimer !== undefined) {
+        window.clearTimeout(authorizationTimer);
+      }
+    };
+  }, [router, allowedRoles]);
 
   if (!isAuthorized) {
     return (

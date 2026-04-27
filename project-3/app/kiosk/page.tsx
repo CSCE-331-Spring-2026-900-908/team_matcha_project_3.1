@@ -256,7 +256,7 @@ useEffect(() => {
 
   if (isLoading || !googleScriptReady || kioskUser || !googleAccounts?.id) return;
 
-  const handleCredentialResponse = async (response: any) => {
+  const handleCredentialResponse = async (response: { credential: string }) => {
     try {
       const res = await fetch('/api/auth/google', {
         method: 'POST',

@@ -3,6 +3,38 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+type GoogleCredentialResponse = {
+  credential: string;
+};
+
+type GoogleAccountsApi = {
+  id: {
+    initialize: (options: {
+      client_id: string | undefined;
+      callback: (response: GoogleCredentialResponse) => void;
+    }) => void;
+    renderButton: (
+      element: HTMLElement | null,
+      options: {
+        theme: string;
+        size: string;
+        text: string;
+      }
+    ) => void;
+  };
+};
+
+function getSafeReturnTo() {
+  const params = new URLSearchParams(window.location.search);
+  const returnTo = params.get('returnTo');
+
+  if (!returnTo || !returnTo.startsWith('/') || returnTo.startsWith('//')) {
+    return null;
+  }
+
+  return returnTo;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +44,7 @@ export default function LoginPage() {
   useEffect(() => {
     setMounted(true);
     
-    const handleCredentialResponse = async (response: any) => {
+    const handleCredentialResponse = async (response: GoogleCredentialResponse) => {
       setLoading(true);
       setError(null);
       try {
@@ -28,7 +60,11 @@ export default function LoginPage() {
           localStorage.setItem('user_role', data.user.role);
           localStorage.setItem('user_name', data.user.name);
 
-          if (data.user.role === 'manager') {
+          const returnTo = getSafeReturnTo();
+
+          if (returnTo) {
+            router.push(returnTo);
+          } else if (data.user.role === 'manager') {
             router.push('/manager');
           } else {
             router.push('/employee');
@@ -49,12 +85,16 @@ export default function LoginPage() {
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.onload = () => {
-      if ((window as any).google) {
-        (window as any).google.accounts.id.initialize({
+      const googleAccounts = (window as Window & {
+        google?: { accounts?: GoogleAccountsApi };
+      }).google?.accounts;
+
+      if (googleAccounts?.id) {
+        googleAccounts.id.initialize({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: handleCredentialResponse,
         });
-        (window as any).google.accounts.id.renderButton(
+        googleAccounts.id.renderButton(
           document.getElementById("googleBtn"),
           { theme: "outline", size: "large", text: "signin_with" }
         );
