@@ -8,18 +8,6 @@ type MenuItem = {
   cost: number;
 };
 
-type Bestseller = {
-  menuid: number;
-  name: string;
-  unitsSold: number;
-  salesAmount: number;
-};
-
-type SpotlightResponse = {
-  bestseller: Bestseller | null;
-  source: 'last-7-days' | 'all-time';
-};
-
 type InventoryItem = {
   inventoryId: number;
   name: string;
@@ -76,8 +64,6 @@ function isToppingItem(item: InventoryItem) {
 export default function MenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [toppings, setToppings] = useState<InventoryItem[]>([]);
-  const [bestseller, setBestseller] = useState<Bestseller | null>(null);
-  const [bestsellerSource, setBestsellerSource] = useState<'last-7-days' | 'all-time'>('last-7-days');
   const [isLoading, setIsLoading] = useState(true);
   const [menuError, setMenuError] = useState<string | null>(null);
   const [toppingError, setToppingError] = useState<string | null>(null);
@@ -92,21 +78,15 @@ export default function MenuPage() {
 
       try {
         const menuResponse = await fetch('/api/menu');
-        const spotlightResponse = await fetch('/api/menu/spotlight');
 
         if (!menuResponse.ok) {
           throw new Error('Failed to load menu items.');
         }
 
         const menuData = (await menuResponse.json()) as MenuItem[];
-        const spotlightData = spotlightResponse.ok
-          ? ((await spotlightResponse.json()) as SpotlightResponse)
-          : { bestseller: null, source: 'last-7-days' as const };
 
         if (isMounted) {
           setItems(menuData);
-          setBestseller(spotlightData.bestseller);
-          setBestsellerSource(spotlightData.source);
         }
       } catch (fetchError) {
         if (isMounted) {
@@ -239,7 +219,7 @@ export default function MenuPage() {
         className="grid h-full min-h-0 grid-rows-[auto_1fr_auto] overflow-hidden border border-[#d8d1c5] bg-[#fffdf8] shadow-[0_16px_40px_rgba(40,34,25,0.12)]"
       >
         <header className="flex min-h-0 items-start border-b-2 border-[#37332c] px-3 py-2 sm:px-5">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <p className="font-serif text-[0.68rem] font-bold uppercase tracking-[0.28em] text-[#6b6458] sm:text-sm">
               Team Matcha
             </p>
@@ -247,22 +227,6 @@ export default function MenuPage() {
               Bubble Tea Menu
             </h1>
           </div>
-          {bestseller ? (
-            <div className="ml-4 hidden max-w-[20rem] rounded-[18px] border border-[#d5c39d] bg-[linear-gradient(145deg,#fff4d7_0%,#f5e3b6_100%)] px-4 py-3 text-right shadow-[0_10px_24px_rgba(80,58,18,0.12)] lg:block">
-              <p className="font-serif text-[0.62rem] font-black uppercase tracking-[0.24em] text-[#7a5a1f]">
-                Bestseller Spotlight
-              </p>
-              <p className="mt-1 text-[1.05rem] font-black leading-tight text-[#2d2417]">
-                {bestseller.name}
-              </p>
-              <p className="mt-1 text-[0.76rem] font-semibold text-[#6a5837]">
-                {bestseller.unitsSold}{' '}
-                {bestsellerSource === 'last-7-days'
-                  ? 'sold this week'
-                  : 'sold all time'}
-              </p>
-            </div>
-          ) : null}
         </header>
 
         <div className="min-h-0 overflow-hidden px-2 py-2 sm:px-3 lg:px-4">
@@ -286,22 +250,6 @@ export default function MenuPage() {
         </div>
 
         <footer className="grid min-h-0 grid-cols-1 gap-2 border-t border-[#d5cec2] bg-[#ebe7df] px-3 py-3 text-[#302c27] landscape:grid-cols-[1.25fr_1fr_1fr] sm:grid-cols-3 sm:gap-3 sm:px-5 sm:py-4">
-          {bestseller ? (
-            <section className="sm:col-span-3 rounded-[16px] border border-[#d7c48d] bg-[linear-gradient(135deg,#fff6de_0%,#f5e7bf_100%)] px-3 py-3 text-[#302c27] shadow-[0_8px_20px_rgba(80,58,18,0.08)] lg:hidden">
-              <h3 className="font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#6e541f] underline decoration-2 underline-offset-2 sm:text-[1.05rem]">
-                Bestseller Spotlight
-              </h3>
-              <p className="mt-1 text-[0.9rem] font-black leading-tight sm:text-[1.05rem]">
-                {bestseller.name}
-              </p>
-              <p className="mt-1 text-[0.76rem] font-semibold leading-tight sm:text-[0.92rem] lg:text-[1.04rem]">
-                {bestseller.unitsSold}{' '}
-                {bestsellerSource === 'last-7-days'
-                  ? 'sold in the last 7 days'
-                  : 'sold all time'}
-              </p>
-            </section>
-          ) : null}
           <section className="grid grid-cols-[auto_1fr] gap-2 sm:block">
             <h3 className="whitespace-nowrap font-serif text-[0.86rem] font-black uppercase tracking-[0.14em] text-[#302c27] underline decoration-2 underline-offset-2 sm:mb-1 sm:text-[1.05rem]">
               Toppings
