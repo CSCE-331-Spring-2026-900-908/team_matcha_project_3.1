@@ -19,20 +19,62 @@ type FunctionCall = {
   args?: Record<string, unknown>;
 };
 
-const model = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const thinkingLevel = process.env.GEMINI_THINKING_LEVEL || 'minimal';
-const thinkingBudget = Number(process.env.GEMINI_THINKING_BUDGET ?? 0);
+const configuredModel = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
+const model = configuredModel.replace(/^models\//, '');
+const fallbackModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+const failedModelCooldowns = new Map<string, number>();
 
-function getThinkingConfig() {
-  if (model.startsWith('gemini-3')) {
-    return {
-      thinkingLevel,
-    };
+function getNextPacificMidnightTime() {
+  const now = new Date();
+  const pacificDateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const getPart = (type: string) =>
+    Number(pacificDateParts.find((part) => part.type === type)?.value);
+  const pacificYear = getPart('year');
+  const pacificMonth = getPart('month');
+  const pacificDay = getPart('day');
+  const nextPacificMidnightGuess = Date.UTC(pacificYear, pacificMonth - 1, pacificDay + 1, 8);
+  const pacificOffsetHours =
+    new Date(nextPacificMidnightGuess).toLocaleString('en-US', {
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'shortOffset',
+    }).includes('GMT-7')
+      ? 7
+      : 8;
+
+  return Date.UTC(pacificYear, pacificMonth - 1, pacificDay + 1, pacificOffsetHours);
+}
+
+function getCooldownUntil(status: number) {
+  if (status === 404) return Date.now() + 24 * 60 * 60 * 1000;
+  if (status === 429) return getNextPacificMidnightTime();
+  if (status === 503) return Date.now() + 30 * 60 * 1000;
+
+  return Date.now() + 5 * 60 * 1000;
+}
+
+function isModelCoolingDown(candidateModel: string) {
+  const cooldownUntil = failedModelCooldowns.get(candidateModel);
+
+  if (!cooldownUntil) return false;
+
+  if (Date.now() >= cooldownUntil) {
+    failedModelCooldowns.delete(candidateModel);
+    return false;
   }
 
-  return {
-    thinkingBudget,
-  };
+  return true;
+}
+
+function getModelCandidates() {
+  return [model, ...fallbackModels].filter(
+    (candidate, index, candidates) =>
+      candidates.indexOf(candidate) === index && !isModelCoolingDown(candidate)
+  );
 }
 
 const functionDeclarations = [
@@ -116,38 +158,50 @@ async function callGemini(contents: unknown[]) {
     throw new Error('Missing GEMINI_API_KEY.');
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [
-            {
-              text:
-                'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. Be concise and friendly.',
-            },
-          ],
-        },
-        contents,
-        tools: [{ functionDeclarations }],
-        generationConfig: {
-          temperature: 0.4,
-          thinkingConfig: getThinkingConfig(),
-        },
-      }),
-    }
-  );
+  const errors: string[] = [];
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini request failed: ${errorText}`);
+  const modelCandidates = getModelCandidates();
+
+  if (modelCandidates.length === 0) {
+    failedModelCooldowns.clear();
   }
 
-  return response.json();
+  for (const candidateModel of modelCandidates.length > 0 ? modelCandidates : getModelCandidates()) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${candidateModel}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [
+              {
+                text:
+                  'You are Team Matcha Assistant for a bubble tea POS. Help customers and cashiers with menu information, recommendations, toppings, sweetness, ice levels, and cart additions. Never claim you placed an order. You may add validated items to the cart, but checkout/order submission must be done by the user in the POS UI. Be concise and friendly.',
+              },
+            ],
+          },
+          contents,
+          tools: [{ functionDeclarations }],
+          generationConfig: {
+            temperature: 0.4,
+          },
+        }),
+      }
+    );
+
+    if (response.ok) {
+      return response.json();
+    }
+
+    const errorText = await response.text();
+    errors.push(`${candidateModel}: ${errorText}`);
+    failedModelCooldowns.set(candidateModel, getCooldownUntil(response.status));
+  }
+
+  throw new Error(`Gemini request failed for all configured models: ${errors.join(' | ')}`);
 }
 
 function getText(response: { candidates?: { content?: { parts?: { text?: string }[] } }[] }) {
@@ -167,6 +221,50 @@ function getFunctionCalls(response: {
       ?.map((part) => part.functionCall)
       .filter((call): call is FunctionCall => Boolean(call?.name)) || []
   );
+}
+
+function formatToolReply(toolResults: { name: string; response: unknown }[]) {
+  const cartResult = toolResults.find((result) => result.name === 'add_to_cart')?.response as
+    | { message?: string; cartItems?: AssistantCartItem[] }
+    | undefined;
+
+  if (cartResult?.cartItems?.length) {
+    return `${cartResult.message ?? 'Added the item to your cart.'} You can review it before placing the order.`;
+  }
+
+  const searchResult = toolResults.find((result) => result.name === 'search_menu')?.response as
+    | { results?: { name: string; cost: number; description?: string }[] }
+    | undefined;
+
+  if (searchResult?.results?.length) {
+    return `I found ${searchResult.results
+      .slice(0, 3)
+      .map((item) => `${item.name} ($${item.cost.toFixed(2)})`)
+      .join(', ')}. Tell me which one you want to add.`;
+  }
+
+  const menuResult = toolResults.find((result) => result.name === 'get_menu')?.response as
+    | { menu?: { name: string; cost: number }[] }
+    | undefined;
+
+  if (menuResult?.menu?.length) {
+    return `The menu has options like ${menuResult.menu
+      .slice(0, 5)
+      .map((item) => `${item.name} ($${item.cost.toFixed(2)})`)
+      .join(', ')}.`;
+  }
+
+  const toppingsResult = toolResults.find((result) => result.name === 'get_toppings')?.response as
+    | { toppings?: { name: string; cost: number }[] }
+    | undefined;
+
+  if (toppingsResult?.toppings?.length) {
+    return `Available toppings include ${toppingsResult.toppings
+      .map((item) => item.name)
+      .join(', ')}.`;
+  }
+
+  return 'I can help with menu info and adding drinks to your cart.';
 }
 
 async function runTool(call: FunctionCall) {
@@ -304,7 +402,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      reply: getText(secondResponse) || toolResults.map((result) => result.response).join('\n'),
+      reply: getText(secondResponse) || formatToolReply(toolResults),
       cartItems,
     });
   } catch (error) {
