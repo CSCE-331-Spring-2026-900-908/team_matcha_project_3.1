@@ -13,6 +13,7 @@ type Props = {
   isMobileOverlay?: boolean;
   isOpen?: boolean;
   onClose?: () => void;
+  discountAmount?: number;
 };
 
 export default function CartSidebar({
@@ -26,10 +27,13 @@ export default function CartSidebar({
   isMobileOverlay = false,
   isOpen = true,
   onClose,
+  discountAmount = 0,
 }: Props) {
-  const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
-  const tax = subtotal * 0.0825;
-  const total = subtotal + tax;
+const subtotal = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
+const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+const discounted = Math.max(0, subtotal - discountAmount);
+const tax = discounted * 0.0825;
+const total = discounted + tax;
 
   if (!isOpen) return null;
 

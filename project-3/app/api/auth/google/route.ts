@@ -4,13 +4,12 @@ import { verifyGoogleToken, signToken } from '@/lib/auth-utils';
 
 export async function POST(req: NextRequest) {
   try {
-    const { idToken } = await req.json();
+    const { idToken, source } = await req.json();
 
     if (!idToken) {
       return NextResponse.json({ error: 'ID Token is required' }, { status: 400 });
     }
 
-    // 1. Verify Google Token
     const payload = await verifyGoogleToken(idToken);
     if (!payload || !payload.email || !payload.email_verified) {
       return NextResponse.json({ error: 'Invalid Google token' }, { status: 401 });
@@ -18,7 +17,6 @@ export async function POST(req: NextRequest) {
 
     const { email, name, sub: googleId } = payload;
 
-    // 2. Allow login only for pre-authorized users already present in app_users.
     const client = await pool.connect();
     try {
       const userResult = await client.query(
@@ -30,14 +28,26 @@ export async function POST(req: NextRequest) {
         [googleId, email]
       );
 
-      if (userResult.rows.length === 0) {
-        return NextResponse.json(
-          { error: 'This Google account is not authorized for this POS.' },
-          { status: 403 }
-        );
-      }
+let user = userResult.rows.length > 0 ? userResult.rows[0] : null;
 
-      let user = userResult.rows[0];
+      if (userResult.rows.length === 0) {
+        if (source !== 'kiosk') {
+          return NextResponse.json(
+            { error: 'This Google account is not authorized for this POS.' },
+            { status: 403 }
+          );
+        }
+        // Kiosk customers can self-register
+        const insertResult = await client.query(
+          'INSERT INTO app_users (google_id, email, name, role) VALUES ($1, $2, $3, $4) RETURNING id, google_id, email, name, role',
+          [googleId, email, name, 'customer']
+        );
+        user = insertResult.rows[0];
+      }
+      
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 500 });
+      }
 
       if (
         user.google_id !== googleId ||
