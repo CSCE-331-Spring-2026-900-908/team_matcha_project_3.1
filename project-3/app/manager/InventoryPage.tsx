@@ -43,6 +43,7 @@ function getStockStatus(item: InventoryItem) {
 
 type EditModalState = {
   item: InventoryItem;
+  name: string;
   cost: string;
   stagedStock: number;
   stockChange: string;
@@ -66,6 +67,7 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -121,6 +123,7 @@ export default function InventoryPage() {
     setSaveError(null);
     setEditModal({
       item,
+      name: item.name,
       cost: item.cost.toFixed(2),
       stagedStock: item.inventoryNum,
       stockChange: '1',
@@ -128,7 +131,7 @@ export default function InventoryPage() {
   };
 
   const closeEditModal = () => {
-    if (isSaving) return;
+    if (isSaving || isDeleting) return;
     setEditModal(null);
     setSaveError(null);
   };
@@ -164,7 +167,13 @@ export default function InventoryPage() {
   const handleSave = async () => {
     if (!editModal) return;
 
+    const name = editModal.name.trim();
     const parsedCost = Number(editModal.cost);
+
+    if (!name) {
+      setSaveError('Enter a name for the inventory item.');
+      return;
+    }
 
     if (!Number.isFinite(parsedCost) || parsedCost < 0) {
       setSaveError('Enter a valid cost that is zero or greater.');
@@ -180,6 +189,7 @@ export default function InventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           inventoryId: editModal.item.inventoryId,
+          name,
           cost: parsedCost,
           inventoryNum: editModal.stagedStock,
         }),
@@ -194,7 +204,7 @@ export default function InventoryPage() {
       setItems((prev) =>
         prev.map((item) =>
           item.inventoryId === data.inventoryId ? data : item
-        )
+        ).sort((first, second) => first.name.localeCompare(second.name))
       );
       setEditModal(null);
     } catch (saveFailure) {
@@ -205,6 +215,48 @@ export default function InventoryPage() {
       );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editModal) return;
+
+    const confirmed = window.confirm(
+      `Delete ${editModal.item.name}? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    setSaveError(null);
+
+    try {
+      const response = await authFetch('/api/manager/inventory', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inventoryId: editModal.item.inventoryId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete inventory item.');
+      }
+
+      setItems((prev) =>
+        prev.filter((item) => item.inventoryId !== editModal.item.inventoryId)
+      );
+      setEditModal(null);
+    } catch (deleteFailure) {
+      setSaveError(
+        deleteFailure instanceof Error
+          ? deleteFailure.message
+          : 'Failed to delete inventory item.'
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -281,7 +333,7 @@ export default function InventoryPage() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="mt-3 inline-flex items-center justify-center self-start rounded-full bg-[#46b96c] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(70,185,108,0.24)] transition hover:bg-[#38c567] sm:mt-6"
+            className="mt-3 inline-flex items-center justify-center self-start rounded-full bg-[#3f8a5a] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(63,138,90,0.18)] transition hover:bg-[#34784d] sm:mt-6"
           >
             New Item
           </button>
@@ -419,7 +471,7 @@ export default function InventoryPage() {
                       Edit Inventory
                     </p>
                     <h3 className="mt-2 text-2xl font-bold text-[#223020]">
-                      {editModal.item.name}
+                      {editModal.name.trim() || editModal.item.name}
                     </h3>
                     {getStockStatus({
                       ...editModal.item,
@@ -457,6 +509,7 @@ export default function InventoryPage() {
                   <button
                     type="button"
                     onClick={closeEditModal}
+                    disabled={isDeleting}
                     className="rounded-full border border-[#d9e3d5] px-3 py-1 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3]"
                   >
                     Close
@@ -464,6 +517,23 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="mt-6 space-y-5">
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                      Item Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editModal.name}
+                      onChange={(event) =>
+                        setEditModal({
+                          ...editModal,
+                          name: event.target.value,
+                        })
+                      }
+                      className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                    />
+                  </div>
+
                   <div>
                     <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
                       Cost
@@ -538,23 +608,33 @@ export default function InventoryPage() {
                     </div>
                   ) : null}
 
-                  <div className="flex justify-end gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="button"
-                      onClick={closeEditModal}
-                      disabled={isSaving}
-                      className="rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={handleDelete}
+                      disabled={isSaving || isDeleting}
+                      className="rounded-full border border-[#b85d53] bg-[#c94335] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b8352a] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Cancel
+                      {isDeleting ? 'Deleting...' : 'Delete Item'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isSaving ? 'Saving...' : 'Save Changes'}
-                    </button>
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={closeEditModal}
+                        disabled={isSaving || isDeleting}
+                        className="rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving || isDeleting}
+                        className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

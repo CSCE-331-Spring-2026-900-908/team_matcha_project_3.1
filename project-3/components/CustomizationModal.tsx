@@ -249,7 +249,7 @@ export default function CustomizationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="customization-title-dialog" aria-describedby="customization-price-dialog">
-      <div className="relative w-full max-w-xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
+      <div className="relative w-full max-w-7xl overflow-hidden rounded-[32px] bg-white shadow-2xl animate-scale-in">
         {showDialogImage ? (
         <header className="relative h-56 w-full bg-[#f8f1e7]">
           {item.image_url ? (

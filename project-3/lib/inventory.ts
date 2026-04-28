@@ -59,6 +59,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
 
 export async function updateInventoryItem(
   inventoryId: number,
+  name: string,
   cost: number,
   inventoryNum: number
 ): Promise<InventoryItem | null> {
@@ -67,10 +68,10 @@ export async function updateInventoryItem(
   try {
     const result = await client.query<InventoryRow>(
       `UPDATE inventory
-       SET cost = $2, inventorynum = $3
+       SET name = $2, cost = $3, inventorynum = $4
        WHERE inventoryid = $1
        RETURNING inventoryid, name, cost, inventorynum, useaverage;`,
-      [inventoryId, cost, inventoryNum]
+      [inventoryId, name, cost, inventoryNum]
     );
 
     const row = result.rows[0];
@@ -104,6 +105,32 @@ export async function createInventoryItem(
     );
 
     return mapInventoryRow(result.rows[0]);
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteInventoryItem(
+  inventoryId: number
+): Promise<{ deleted: boolean; inUse: boolean }> {
+  const client = await pool.connect();
+
+  try {
+    const usageResult = await client.query<{ count: string }>(
+      'SELECT COUNT(*) AS count FROM menu_items WHERE inventoryid = $1;',
+      [inventoryId]
+    );
+
+    if (Number(usageResult.rows[0]?.count ?? 0) > 0) {
+      return { deleted: false, inUse: true };
+    }
+
+    const deleteResult = await client.query(
+      'DELETE FROM inventory WHERE inventoryid = $1;',
+      [inventoryId]
+    );
+
+    return { deleted: (deleteResult.rowCount ?? 0) > 0, inUse: false };
   } finally {
     client.release();
   }

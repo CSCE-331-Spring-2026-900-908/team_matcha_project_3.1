@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware-utils';
 import {
   createInventoryItem,
+  deleteInventoryItem,
   getInventoryItems,
   updateInventoryItem,
 } from '@/lib/inventory';
@@ -73,16 +74,18 @@ export async function PATCH(req: NextRequest) {
     try {
       const body = await request.json();
       const inventoryId = Number(body.inventoryId);
+      const name = String(body.name ?? '').trim();
       const cost = Number(body.cost);
       const inventoryNum = Number(body.inventoryNum);
 
       if (
         !Number.isFinite(inventoryId) ||
+        !name ||
         !Number.isFinite(cost) ||
         !Number.isFinite(inventoryNum)
       ) {
         return NextResponse.json(
-          { error: 'Inventory ID, cost, and stock are required.' },
+          { error: 'Inventory ID, name, cost, and stock are required.' },
           { status: 400 }
         );
       }
@@ -96,6 +99,7 @@ export async function PATCH(req: NextRequest) {
 
       const updatedItem = await updateInventoryItem(
         inventoryId,
+        name,
         cost,
         Math.floor(inventoryNum)
       );
@@ -112,6 +116,49 @@ export async function PATCH(req: NextRequest) {
       console.error('Inventory update error:', error);
       return NextResponse.json(
         { error: 'Failed to update inventory item.' },
+        { status: 500 }
+      );
+    }
+  });
+}
+
+export async function DELETE(req: NextRequest) {
+  return withAuth(req, ['manager'], async (request) => {
+    try {
+      const body = await request.json();
+      const inventoryId = Number(body.inventoryId);
+
+      if (!Number.isFinite(inventoryId)) {
+        return NextResponse.json(
+          { error: 'Inventory ID is required.' },
+          { status: 400 }
+        );
+      }
+
+      const result = await deleteInventoryItem(inventoryId);
+
+      if (result.inUse) {
+        return NextResponse.json(
+          {
+            error:
+              'This inventory item is used by one or more menu items and cannot be deleted.',
+          },
+          { status: 409 }
+        );
+      }
+
+      if (!result.deleted) {
+        return NextResponse.json(
+          { error: 'Inventory item not found.' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ deleted: true, inventoryId });
+    } catch (error) {
+      console.error('Inventory delete error:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete inventory item.' },
         { status: 500 }
       );
     }
