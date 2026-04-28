@@ -17,6 +17,7 @@ import {
   type MenuItem,
   type CartItem,
 } from '@/components/pos-types';
+import { MENU_CATEGORY_LABELS } from '@/lib/menu-categories';
 
 type GoogleAccountsApi = {
   id: {
@@ -331,8 +332,8 @@ useEffect(() => {
 }, [kioskUser]);
 
   const categories = useMemo(() => {
-    const cats = new Set(items.map((item) => categorizeItem(item.name)));
-    return ['All', ...Array.from(cats)];
+    const itemCategories = new Set(items.map((item) => categorizeItem(item.name)));
+    return ['All', ...MENU_CATEGORY_LABELS.filter((category) => itemCategories.has(category))];
   }, [items]);
 
   const filteredItems = useMemo(() => {
@@ -348,7 +349,7 @@ useEffect(() => {
   const seasonalItem = useMemo(
     () =>
       items.find((item) => item.name.toLowerCase().includes('brown sugar')) ??
-      items.find((item) => categorizeItem(item.name) === 'Specials') ??
+      items.find((item) => categorizeItem(item.name) === 'Milk Teas') ??
       items[1] ??
       items[0] ??
       null,
@@ -678,9 +679,11 @@ if (kioskUser) {
                       : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#e6d8c4]'
                   }`}
                 >
-                  <span aria-hidden="true">
-                    <CategoryIcon iconName={getCategoryIcon(cat)} />
-                  </span>
+                  {cat === 'All' ? (
+                    <span aria-hidden="true">
+                      <CategoryIcon iconName={getCategoryIcon(cat)} />
+                    </span>
+                  ) : null}
                   {cat}
                 </button>
               ))}

@@ -2,21 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { MenuItem as SharedMenuItem } from '@/components/pos-types';
+import {
+  categorizeMenuItem,
+  MENU_CATEGORIES,
+  type MenuCategoryKey,
+} from '@/lib/menu-categories';
 import { AVAILABLE_TOPPINGS, TOPPING_COSTS } from '@/lib/toppings';
 
 type MenuItem = Pick<SharedMenuItem, 'menuid' | 'name' | 'cost'>;
-
-type CategoryKey = 'milkTeas' | 'fruitTeas' | 'greenOolong';
-
-const categoryConfig: {
-  key: CategoryKey;
-  title: string;
-  color: string;
-}[] = [
-  { key: 'milkTeas', title: 'Milk Teas', color: '#c95d70' },
-  { key: 'fruitTeas', title: 'Fruit Teas', color: '#d79b28' },
-  { key: 'greenOolong', title: 'Green & Oolong Teas', color: '#3f8a5a' },
-];
 
 const sweetnessLevels = ['0%', '25%', '50%', '75%', '100%', '125%'];
 const iceLevels = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
@@ -34,22 +27,6 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
 });
-
-function categorizeItem(name: string): CategoryKey | null {
-  if (name.includes('Green Tea') || name.includes('Oolong')) {
-    return 'greenOolong';
-  }
-
-  if (name.includes('Fruit Tea')) {
-    return 'fruitTeas';
-  }
-
-  if (name.includes('Milk Tea')) {
-    return 'milkTeas';
-  }
-
-  return null;
-}
 
 export default function MenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -98,21 +75,21 @@ export default function MenuPage() {
   }, []);
 
   const groupedItems = useMemo(() => {
-    return items.reduce<Record<CategoryKey, MenuItem[]>>(
+    return items.reduce<Record<MenuCategoryKey, MenuItem[]>>(
       (groups, item) => {
-        const category = categorizeItem(item.name);
+        const category = categorizeMenuItem(item.name);
 
         if (category) {
-          groups[category].push(item);
+          groups[category.key].push(item);
         }
 
         return groups;
       },
-      { milkTeas: [], fruitTeas: [], greenOolong: [] }
+      { milkTeas: [], fruitTeas: [], greenOolongTeas: [] }
     );
   }, [items]);
 
-  function renderCategory(category: (typeof categoryConfig)[number]) {
+  function renderCategory(category: (typeof MENU_CATEGORIES)[number]) {
     const categoryItems = groupedItems[category.key];
 
     return (
@@ -122,7 +99,7 @@ export default function MenuPage() {
           style={{ color: category.color }}
         >
           <h2 className="menu-board-category-title truncate font-serif text-[1.85vw] font-black uppercase leading-none tracking-[0.01em]">
-            {category.title}
+            {category.label}
           </h2>
           <span className="menu-board-price-label text-[0.8vw] font-black uppercase tracking-[0.08em] text-[#777064]">
             Price
@@ -187,10 +164,10 @@ export default function MenuPage() {
               </div>
             ) : (
               <div className="grid h-full min-h-0 grid-cols-[1.45fr_1fr] gap-x-[1.8vw] overflow-hidden">
-                {renderCategory(categoryConfig[0])}
+                {renderCategory(MENU_CATEGORIES[0])}
                 <div className="grid min-h-0 auto-rows-min content-start gap-y-[1.2vw] overflow-hidden">
-                  {renderCategory(categoryConfig[1])}
-                  {renderCategory(categoryConfig[2])}
+                  {renderCategory(MENU_CATEGORIES[1])}
+                  {renderCategory(MENU_CATEGORIES[2])}
                 </div>
               </div>
             )}
