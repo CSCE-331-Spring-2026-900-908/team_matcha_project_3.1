@@ -65,7 +65,8 @@ const hasSameCustomization = (first: CartItem, second: CartItem) =>
   first.menuid === second.menuid &&
   first.iceLevel === second.iceLevel &&
   first.sugarLevel === second.sugarLevel &&
-  first.topping === second.topping;
+  first.topping === second.topping &&
+  (first.cupSize ?? 'Medium') === (second.cupSize ?? 'Medium');
 
 function CategoryIcon({ iconName }: { iconName: string }) {
   switch (iconName) {
@@ -448,12 +449,12 @@ useEffect(() => {
     closeModal();
   };
 
-  const removeFromCart = (menuid: number) => {
+  const removeFromCart = (index: number) => {
     setCart((prev) => {
-      const index = prev.findLastIndex((i) => i.menuid === menuid);
       if (index === -1) return prev;
-
+      
       const item = prev[index];
+      if (!item) return prev;
       if (item.quantity > 1) {
         return prev.map((i, idx) =>
           idx === index ? { ...i, quantity: i.quantity - 1 } : i
@@ -533,6 +534,7 @@ const response = await fetch('/api/orders', {
       iceLevel: item.iceLevel,
       sugarLevel: item.sugarLevel,
       topping: item.topping,
+      cupSize: item.cupSize,
     })),
   }),
 });
@@ -1033,6 +1035,9 @@ extraFields={
           }
           initialTopping={
             modalState.mode === 'edit' ? modalState.item.topping : undefined
+          }
+          initialCupSize={
+            modalState.mode === 'edit' ? modalState.item.cupSize : undefined
           }
           confirmLabel={
             modalState.mode === 'edit' ? 'Save Changes' : 'Add to Order'

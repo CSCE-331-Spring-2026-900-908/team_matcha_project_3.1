@@ -5,7 +5,7 @@ import { currencyFormatter, type CartItem } from './pos-types';
 type Props = {
   cart: CartItem[];
   onAdd: (item: CartItem) => void;
-  onRemove: (menuid: number) => void;
+  onRemove: (index: number) => void;
   onPlaceOrder: () => void;
   isPlacingOrder?: boolean;
   extraFields?: React.ReactNode;
@@ -113,6 +113,7 @@ const total = discounted + tax;
                     </div>
                     <p className="mt-2 text-sm text-[#4a554a]">
                       {[
+                        item.cupSize ?? null,
                         item.iceLevel ?? null,
                         item.sugarLevel ?? null,
                         item.topping && item.topping !== 'None' ? item.topping : null,
@@ -136,7 +137,7 @@ const total = discounted + tax;
                       )}
                       <div className="ml-auto flex items-center gap-1 rounded-[18px] border border-[#eadfce] bg-[#fdfaf6] p-1.5">
                         <button
-                          onClick={() => onRemove(item.menuid)}
+                          onClick={() => onRemove(index)}
                           className="flex h-11 w-11 items-center justify-center rounded-[14px] text-[#4a554a] transition-colors hover:bg-white hover:text-red-700 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-inset"
                           aria-label={`Decrease quantity of ${item.name}`}
                         >

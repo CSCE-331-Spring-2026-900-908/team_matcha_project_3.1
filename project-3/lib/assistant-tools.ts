@@ -1,4 +1,5 @@
 import { getInventoryItems } from '@/lib/inventory';
+import { DEFAULT_CUP_SIZE, type CupSize } from '@/lib/cup-sizes';
 import { getMenuItems, type MenuItem } from '@/lib/menu';
 import { MENU_EXTRAS } from '@/lib/menu-data';
 import {
@@ -15,6 +16,7 @@ export type AssistantCartItem = MenuItem & {
   iceLevel: string;
   sugarLevel: string;
   topping: string;
+  cupSize: CupSize;
 };
 
 type MenuSearchResult = MenuItem & {
@@ -125,6 +127,7 @@ export async function createAssistantCartItems(input: {
   iceLevel?: string;
   sugarLevel?: string;
   topping?: string;
+  cupSize?: string;
 }): Promise<{
   cartItems: AssistantCartItem[];
   matchedItem: MenuSearchResult | null;
@@ -152,6 +155,7 @@ export async function createAssistantCartItems(input: {
     iceLevel: pickClosest(input.iceLevel, ICE_LEVELS, 'Regular Ice'),
     sugarLevel: pickClosest(input.sugarLevel, SUGAR_LEVELS, '100%'),
     topping,
+    cupSize: DEFAULT_CUP_SIZE,
   };
 
   return {
@@ -260,6 +264,7 @@ export async function createWeatherRecommendedCartItem() {
     iceLevel: 'Regular Ice',
     sugarLevel: '100%',
     topping: 'None',
+    cupSize: DEFAULT_CUP_SIZE,
   };
 
   const reason = getWeatherRecommendationReason(weather);

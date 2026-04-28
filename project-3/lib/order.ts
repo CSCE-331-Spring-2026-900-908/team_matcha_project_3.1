@@ -1,6 +1,14 @@
 import type { PoolClient } from 'pg';
 
 import pool from '@/lib/db';
+import {
+  CUP_INVENTORY_IDS,
+  CUP_LID_INVENTORY_ID,
+  CUP_SIZE_MULTIPLIERS,
+  normalizeCupSize,
+  STRAW_INVENTORY_ID,
+  type CupSize,
+} from '@/lib/cup-sizes';
 import { formatToppings, normalizeToppingName, parseToppings } from '@/lib/toppings';
 import { earnPoints } from './rewards';
 
@@ -31,6 +39,7 @@ type OrderItemInput = {
   sugarLevel?: string;
   topping?: string;
   toppings?: string[];
+  cupSize?: string;
 };
 
 type InventoryLookupRow = {
@@ -38,6 +47,13 @@ type InventoryLookupRow = {
   name: string;
   inventorynum: number | string | null;
 };
+
+const CUP_INVENTORY_ID_SET = new Set(Object.values(CUP_INVENTORY_IDS));
+const SUPPLY_INVENTORY_ID_SET = new Set([
+  ...Object.values(CUP_INVENTORY_IDS),
+  CUP_LID_INVENTORY_ID,
+  STRAW_INVENTORY_ID,
+]);
 
 async function syncSequence(
   connection: PoolClient,
@@ -98,7 +114,12 @@ export async function createOrder(
         ]
       );
 
-      await decrementMenuItemInventory(connection, item.menuid, itemQuantity);
+      await decrementMenuItemInventory(
+        connection,
+        item.menuid,
+        itemQuantity,
+        normalizeCupSize(item.cupSize)
+      );
       await decrementToppingInventory(connection, toppingString, itemQuantity);
     }
     if(userID) 
@@ -136,6 +157,38 @@ function findToppingInventoryItem(
 
     return inventoryName.includes(toppingName);
   });
+}
+
+function getSizedInventoryRequirement(
+  inventoryId: number,
+  baseQuantity: number,
+  cupSize: CupSize
+) {
+  if (CUP_INVENTORY_ID_SET.has(inventoryId)) {
+    return {
+      inventoryId: CUP_INVENTORY_IDS[cupSize],
+      unitsPerItem: 1,
+    };
+  }
+
+  if (SUPPLY_INVENTORY_ID_SET.has(inventoryId)) {
+    return {
+      inventoryId,
+      unitsPerItem: 1,
+    };
+  }
+
+  return {
+    inventoryId,
+    unitsPerItem: Math.max(
+      1,
+      Math.ceil(baseQuantity * CUP_SIZE_MULTIPLIERS[cupSize])
+    ),
+  };
+}
+
+function findInventoryRow(inventoryRows: InventoryLookupRow[], inventoryId: number) {
+  return inventoryRows.find((row) => Number(row.inventoryid) === inventoryId);
 }
 
 async function validateOrderInventory(
@@ -197,8 +250,10 @@ async function validateOrderInventory(
 
   for (const item of items) {
     const itemQuantity = getOrderedQuantity(item.quantity);
+    const cupSize = normalizeCupSize(item.cupSize);
     const menuRows = menuRowsById.get(item.menuid) ?? [];
     const itemName = menuRows[0]?.menuname ?? `Menu item #${item.menuid}`;
+    const orderItemName = `${itemName} (${cupSize})`;
     const ingredientRows = menuRows.filter(
       (row) => row.inventoryid !== null && row.itemquantity !== null
     );
@@ -215,32 +270,41 @@ async function validateOrderInventory(
     }
 
     for (const row of ingredientRows) {
-      const inventoryId = Number(row.inventoryid);
-      const requested = Number(row.itemquantity) * itemQuantity;
+      const baseInventoryId = Number(row.inventoryid);
+      const baseQuantity = Number(row.itemquantity);
+      const sizedRequirement = getSizedInventoryRequirement(
+        baseInventoryId,
+        baseQuantity,
+        cupSize
+      );
+      const inventoryId = sizedRequirement.inventoryId;
+      const inventoryItem = findInventoryRow(inventoryRows, inventoryId);
+      const requested = sizedRequirement.unitsPerItem * itemQuantity;
       const existing = requiredByInventory.get(inventoryId);
 
       if (existing) {
         existing.requested += requested;
-        const existingItem = existing.orderItems.get(itemName);
-        existing.orderItems.set(itemName, {
+        const existingItem = existing.orderItems.get(orderItemName);
+        existing.orderItems.set(orderItemName, {
           requested: (existingItem?.requested ?? 0) + requested,
           orderedQuantity: (existingItem?.orderedQuantity ?? 0) + itemQuantity,
-          unitsPerItem: Number(row.itemquantity),
+          unitsPerItem: sizedRequirement.unitsPerItem,
         });
         continue;
       }
 
       requiredByInventory.set(inventoryId, {
-        ingredientName: row.ingredientname ?? `Inventory item #${inventoryId}`,
+        ingredientName:
+          inventoryItem?.name ?? row.ingredientname ?? `Inventory item #${inventoryId}`,
         requested,
-        available: Number(row.inventorynum ?? 0),
+        available: Number(inventoryItem?.inventorynum ?? 0),
         orderItems: new Map([
           [
-            itemName,
+            orderItemName,
             {
               orderedQuantity: itemQuantity,
               requested,
-              unitsPerItem: Number(row.itemquantity),
+              unitsPerItem: sizedRequirement.unitsPerItem,
             },
           ],
         ]),
@@ -329,19 +393,45 @@ async function validateOrderInventory(
 async function decrementMenuItemInventory(
   connection: PoolClient,
   menuId: number,
-  quantity: number
+  quantity: number,
+  cupSize: CupSize
 ) {
-  await connection.query(
-    `UPDATE inventory AS inventory_item
-     SET inventorynum = GREATEST(
-       0,
-       inventory_item.inventorynum - (menu_item.itemquantity * $2)
-     )
-     FROM menu_items AS menu_item
-     WHERE menu_item.inventoryid = inventory_item.inventoryid
-       AND menu_item.menuid = $1;`,
-    [menuId, quantity]
+  const recipeResult = await connection.query<{
+    inventoryid: number;
+    itemquantity: number | string;
+  }>(
+    `SELECT inventoryid, itemquantity
+     FROM menu_items
+     WHERE menuid = $1
+       AND inventoryid IS NOT NULL
+       AND itemquantity IS NOT NULL;`,
+    [menuId]
   );
+
+  const requiredByInventory = new Map<number, number>();
+
+  for (const row of recipeResult.rows) {
+    const requirement = getSizedInventoryRequirement(
+      Number(row.inventoryid),
+      Number(row.itemquantity),
+      cupSize
+    );
+
+    requiredByInventory.set(
+      requirement.inventoryId,
+      (requiredByInventory.get(requirement.inventoryId) ?? 0) +
+        requirement.unitsPerItem * quantity
+    );
+  }
+
+  for (const [inventoryId, decrementQuantity] of requiredByInventory) {
+    await connection.query(
+      `UPDATE inventory
+       SET inventorynum = GREATEST(0, inventorynum - $2)
+       WHERE inventoryid = $1;`,
+      [inventoryId, decrementQuantity]
+    );
+  }
 }
 
 async function decrementToppingInventory(

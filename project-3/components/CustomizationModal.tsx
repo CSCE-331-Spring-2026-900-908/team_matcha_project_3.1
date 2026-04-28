@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { MenuItem, CartItem, currencyFormatter, supportsHot } from './pos-types';
+import { CUP_SIZES, DEFAULT_CUP_SIZE, type CupSize } from '@/lib/cup-sizes';
 import {
   AVAILABLE_TOPPINGS,
   formatToppings,
@@ -19,6 +20,7 @@ type Props = {
   initialSugarLevel?: string;
   initialTopping?: string;
   initialTemperature?: 'Hot' | 'Cold';
+  initialCupSize?: CupSize;
   confirmLabel?: string;
   presentation?: 'dialog' | 'fullscreen';
   showDialogImage?: boolean;
@@ -37,6 +39,7 @@ export default function CustomizationModal({
   initialSugarLevel,
   initialTopping,
   initialTemperature,
+  initialCupSize,
   confirmLabel,
   presentation = 'dialog',
   showDialogImage = true,
@@ -46,6 +49,7 @@ export default function CustomizationModal({
   const [iceLevel, setIceLevel] = useState(initialIceLevel ?? DEFAULT_ICE_LEVEL);
   const [sugarLevel, setSugarLevel] = useState(initialSugarLevel ?? DEFAULT_SUGAR_LEVEL);
   const [selectedToppings, setSelectedToppings] = useState(() => parseToppings(initialTopping));
+  const [cupSize, setCupSize] = useState<CupSize>(initialCupSize ?? DEFAULT_CUP_SIZE);
   // Default to 'Cold' if not hot-eligible, otherwise respect initialTemperature or default 'Cold'
   const [temperature, setTemperature] = useState<'Hot' | 'Cold'>(
     !hotEligible ? 'Cold' : (initialTemperature ?? 'Cold')
@@ -72,6 +76,7 @@ export default function CustomizationModal({
       sugarLevel,
       topping,
       temperature,
+      cupSize,
     });
   };
 
@@ -99,6 +104,26 @@ export default function CustomizationModal({
             }`}
           >
             {temp === 'Hot' ? '☕ Hot' : '🧊 Cold'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const CupSizeToggle = () => (
+    <div>
+      <h3 className="text-sm font-bold uppercase tracking-wider text-[#4a554a]">Cup Size</h3>
+      <div className="mt-3 flex flex-wrap gap-3" role="group" aria-label="Cup Size">
+        {CUP_SIZES.map((size) => (
+          <button
+            key={size}
+            onClick={() => setCupSize(size)}
+            aria-pressed={cupSize === size}
+            className={`min-h-[48px] rounded-full px-6 py-2 text-base font-bold transition-all focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] ${
+              cupSize === size ? 'bg-[#2f7a5f] text-white shadow-md' : 'bg-[#f8f1e7] text-[#4a554a] hover:bg-[#eadfce]'
+            }`}
+          >
+            {size}
           </button>
         ))}
       </div>
@@ -153,6 +178,8 @@ export default function CustomizationModal({
                 </header>
 
                 <div className="mt-10 space-y-8">
+                  {CupSizeToggle()}
+
                   {hotEligible && TemperatureToggle()}
 
                   {temperature === 'Cold' && (
@@ -291,6 +318,8 @@ export default function CustomizationModal({
           </div>
 
           <div className="mt-8 space-y-8 max-h-[50vh] overflow-y-auto pr-2">
+            {CupSizeToggle()}
+
             {hotEligible && TemperatureToggle()}
 
             {/* Ice Level */}

@@ -13,6 +13,7 @@ type AssistantCartItem = CartItem & {
   iceLevel: string;
   sugarLevel: string;
   topping: string;
+  cupSize: CartItem['cupSize'];
 };
 
 type AssistantResponse = {
@@ -102,6 +103,7 @@ export default function AssistantWidget({ onAddToCart, className = '' }: Props) 
           iceLevel: item.iceLevel,
           sugarLevel: item.sugarLevel,
           topping: item.topping,
+          cupSize: item.cupSize,
         });
         addedCount += 1;
       }

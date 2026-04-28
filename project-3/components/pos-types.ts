@@ -1,6 +1,7 @@
 // This file defines TypeScript types and utility functions related to the POS system, including menu items, cart items, and currency formatting.
 
 import { categorizeMenuItem } from '@/lib/menu-categories';
+import type { CupSize } from '@/lib/cup-sizes';
 
 export type MenuItem = {
   menuid: number;
@@ -16,6 +17,7 @@ export type CartItem = MenuItem & {
   sugarLevel?: string;
   topping?: string;
   temperature?: 'Hot' | 'Cold';
+  cupSize?: CupSize;
 };
 
 export const COLD_ONLY_ITEMS = new Set<string>([]);
