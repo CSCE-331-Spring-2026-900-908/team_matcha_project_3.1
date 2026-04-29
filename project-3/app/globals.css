@@ -621,6 +621,11 @@ html.contrast-dark .bg-\[\#fff4f1\] {
   background: #3b1f26 !important;
 }
 
+html.contrast-dark .contrast-image-overlay {
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0) 32%, rgba(2, 6, 23, 0.78) 100%) !important;
+  background-image: linear-gradient(180deg, rgba(2, 6, 23, 0) 32%, rgba(2, 6, 23, 0.78) 100%) !important;
+}
+
 html.contrast-dark .text-white,
 html.contrast-dark [class*="text-white"] {
   color: #f8fafc !important;

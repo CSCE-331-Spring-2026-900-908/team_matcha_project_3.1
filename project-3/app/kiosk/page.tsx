@@ -786,7 +786,7 @@ if (kioskUser) {
                       🍵
                     </div>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(31,37,32,0.82)_100%)] p-5 text-white">
+                  <div className="contrast-image-overlay absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(31,37,32,0.82)_100%)] p-5 text-white">
                     <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/72">
                       Highlighted Drink
                     </p>

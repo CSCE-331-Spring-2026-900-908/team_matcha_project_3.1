@@ -59,7 +59,7 @@ export default function MenuGrid({
                 )}
 
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(31,37,32,0.82)_100%)]" />
+                <div className="contrast-image-overlay absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(31,37,32,0.82)_100%)]" />
 
                 {/* Badge */}
                 <div className="absolute right-3 top-3 flex flex-wrap justify-end gap-2">
