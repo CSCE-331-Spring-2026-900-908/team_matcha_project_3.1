@@ -8,6 +8,7 @@ export type MenuItem = {
   category_id?: number | null;
   category_label?: string | null;
   category_color?: string | null;
+  category_display_order?: number | null;
   stockStatus?: 'low' | 'out';
 };
 
@@ -22,6 +23,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
       category_id?: number | null;
       category_label?: string | null;
       category_color?: string | null;
+      category_display_order?: number | string | null;
       inventoryid: number | null;
       inventorynum: number | string | null;
       inventory_is_active: boolean | null;
@@ -36,6 +38,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
         menu.category_id,
         menu_category.name AS category_label,
         menu_category.color AS category_color,
+        menu_category.display_order AS category_display_order,
         menu_item.inventoryid,
         inventory.inventorynum,
         inventory.is_active AS inventory_is_active,
@@ -63,6 +66,11 @@ export async function getMenuItems(): Promise<MenuItem[]> {
           category_id: row.category_id ?? null,
           category_label: row.category_label ?? null,
           category_color: row.category_color ?? null,
+          category_display_order:
+            row.category_display_order === null ||
+            row.category_display_order === undefined
+              ? null
+              : Number(row.category_display_order),
         });
       }
 

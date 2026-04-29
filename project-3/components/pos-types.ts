@@ -1,6 +1,6 @@
 // This file defines TypeScript types and utility functions related to the POS system, including menu items, cart items, and currency formatting.
 
-import { categorizeMenuItem } from '@/lib/menu-categories';
+import { MENU_CATEGORY_LABELS, categorizeMenuItem } from '@/lib/menu-categories';
 import type { CupSize } from '@/lib/cup-sizes';
 
 export type MenuItem = {
@@ -11,6 +11,7 @@ export type MenuItem = {
   category_id?: number | null;
   category_label?: string | null;
   category_color?: string | null;
+  category_display_order?: number | null;
   stockStatus?: 'low' | 'out';
 };
 
@@ -41,6 +42,50 @@ export const categorizeItem = (
 
   const name = typeof item === 'string' ? item : item.name;
   return categorizeMenuItem(name)?.label ?? 'Other';
+};
+
+export const getCategoryDisplayOrder = (
+  item: string | Pick<MenuItem, 'name' | 'category_label' | 'category_display_order'>
+) => {
+  if (
+    typeof item !== 'string' &&
+    item.category_label &&
+    typeof item.category_display_order === 'number'
+  ) {
+    return item.category_display_order;
+  }
+
+  const name = typeof item === 'string' ? item : item.name;
+  const fallbackCategory = categorizeMenuItem(name);
+  const fallbackIndex = fallbackCategory
+    ? MENU_CATEGORY_LABELS.indexOf(fallbackCategory.label)
+    : -1;
+
+  return fallbackIndex === -1 ? Number.MAX_SAFE_INTEGER : 1000 + fallbackIndex;
+};
+
+export const getOrderedCategories = (items: MenuItem[]) => {
+  const categoriesByLabel = new Map<string, number>();
+
+  for (const item of items) {
+    const label = categorizeItem(item);
+    const order = getCategoryDisplayOrder(item);
+    const currentOrder = categoriesByLabel.get(label);
+
+    if (currentOrder === undefined || order < currentOrder) {
+      categoriesByLabel.set(label, order);
+    }
+  }
+
+  const itemCategories = Array.from(categoriesByLabel, ([label, order]) => ({
+    label,
+    order,
+  })).sort(
+    (first, second) =>
+      first.order - second.order || first.label.localeCompare(second.label)
+  );
+
+  return ['All', ...itemCategories.map((category) => category.label)];
 };
 
 export const getCategoryIcon = (category: string) => {

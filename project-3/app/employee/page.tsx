@@ -13,6 +13,7 @@ import { authFetch } from '@/lib/fetch-utils';
 import { useRouter } from 'next/navigation';
 import {
   categorizeItem,
+  getOrderedCategories,
   type MenuItem,
   type CartItem,
 } from '@/components/pos-types';
@@ -80,10 +81,7 @@ function EmployeePOSContent() {
   }, [router]);
 
   const categories = useMemo(() => {
-    const itemCategories = Array.from(
-      new Set(items.map((item) => categorizeItem(item)))
-    ).sort((first, second) => first.localeCompare(second));
-    return ['All', ...itemCategories];
+    return getOrderedCategories(items);
   }, [items]);
 
   const filteredItems = useMemo(() => {

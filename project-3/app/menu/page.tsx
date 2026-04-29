@@ -7,12 +7,18 @@ import { AVAILABLE_TOPPINGS, TOPPING_COSTS } from '@/lib/toppings';
 
 type MenuItem = Pick<
   SharedMenuItem,
-  'menuid' | 'name' | 'cost' | 'category_label' | 'category_color'
+  | 'menuid'
+  | 'name'
+  | 'cost'
+  | 'category_label'
+  | 'category_color'
+  | 'category_display_order'
 >;
 
 type BoardCategory = {
   label: string;
   color: string;
+  order: number;
   items: MenuItem[];
 };
 
@@ -86,14 +92,27 @@ export default function MenuPage() {
       const fallbackCategory = categorizeMenuItem(item.name);
       const label = item.category_label ?? fallbackCategory?.label ?? 'Other';
       const color = item.category_color ?? fallbackCategory?.color ?? '#667463';
-      const current = groups.get(label) ?? { label, color, items: [] };
+      const fallbackOrder = fallbackCategory
+        ? ['Milk Teas', 'Fruit Teas', 'Green & Oolong Teas'].indexOf(
+            fallbackCategory.label
+          )
+        : -1;
+      const order =
+        typeof item.category_display_order === 'number'
+          ? item.category_display_order
+          : fallbackOrder === -1
+            ? Number.MAX_SAFE_INTEGER
+            : 1000 + fallbackOrder;
+      const current = groups.get(label) ?? { label, color, order, items: [] };
 
       current.items.push(item);
+      current.order = Math.min(current.order, order);
       groups.set(label, current);
     }
 
-    return Array.from(groups.values()).sort((first, second) =>
-      first.label.localeCompare(second.label)
+    return Array.from(groups.values()).sort(
+      (first, second) =>
+        first.order - second.order || first.label.localeCompare(second.label)
     );
   }, [items]);
 

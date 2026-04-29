@@ -13,6 +13,7 @@ import {
   categorizeItem,
   currencyFormatter,
   getCategoryIcon,
+  getOrderedCategories,
   getItemBadge,
   type MenuItem,
   type CartItem,
@@ -332,10 +333,7 @@ useEffect(() => {
 }, [kioskUser]);
 
   const categories = useMemo(() => {
-    const itemCategories = Array.from(
-      new Set(items.map((item) => categorizeItem(item)))
-    ).sort((first, second) => first.localeCompare(second));
-    return ['All', ...itemCategories];
+    return getOrderedCategories(items);
   }, [items]);
 
   const filteredItems = useMemo(() => {
