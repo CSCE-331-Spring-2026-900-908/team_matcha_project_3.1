@@ -9,6 +9,10 @@ export type InventoryItem = {
   inventoryNum: number;
   useAverage: number;
   daysLeft: number | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  isActive: boolean;
+  archivedAt: string | null;
 };
 
 type InventoryRow = {
@@ -17,6 +21,24 @@ type InventoryRow = {
   cost: string | number;
   inventorynum: number | string;
   useaverage: number | string;
+  category_id: number | null;
+  category_name?: string | null;
+  is_active: boolean | null;
+  archived_at: Date | string | null;
+};
+
+export type InventoryCategory = {
+  categoryId: number;
+  name: string;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+type InventoryCategoryRow = {
+  category_id: number;
+  name: string;
+  display_order: number | string | null;
+  is_active: boolean | null;
 };
 
 function mapInventoryRow(row: InventoryRow): InventoryItem {
@@ -30,6 +52,19 @@ function mapInventoryRow(row: InventoryRow): InventoryItem {
     inventoryNum,
     useAverage,
     daysLeft: useAverage > 0 ? Math.floor(inventoryNum / useAverage) : null,
+    categoryId: row.category_id,
+    categoryName: row.category_name ?? null,
+    isActive: row.is_active ?? true,
+    archivedAt: row.archived_at ? new Date(row.archived_at).toISOString() : null,
+  };
+}
+
+function mapInventoryCategoryRow(row: InventoryCategoryRow): InventoryCategory {
+  return {
+    categoryId: row.category_id,
+    name: row.name,
+    displayOrder: Number(row.display_order ?? 0),
+    isActive: row.is_active ?? true,
   };
 }
 
@@ -43,12 +78,29 @@ async function syncInventorySequence(client: PoolClient) {
   );
 }
 
-export async function getInventoryItems(): Promise<InventoryItem[]> {
+export async function getInventoryItems(
+  includeArchived = false
+): Promise<InventoryItem[]> {
   const client = await pool.connect();
 
   try {
     const result = await client.query<InventoryRow>(
-      'SELECT inventoryid, name, cost, inventorynum, useaverage FROM inventory ORDER BY name ASC;'
+      `SELECT
+        inventory.inventoryid,
+        inventory.name,
+        inventory.cost,
+        inventory.inventorynum,
+        inventory.useaverage,
+        inventory.category_id,
+        category.name AS category_name,
+        inventory.is_active,
+        inventory.archived_at
+       FROM inventory
+       LEFT JOIN inventory_categories AS category
+         ON category.category_id = inventory.category_id
+       WHERE $1::boolean OR COALESCE(inventory.is_active, true) = true
+       ORDER BY COALESCE(inventory.is_active, true) DESC, inventory.name ASC;`,
+      [includeArchived]
     );
 
     return result.rows.map(mapInventoryRow);
@@ -61,17 +113,27 @@ export async function updateInventoryItem(
   inventoryId: number,
   name: string,
   cost: number,
-  inventoryNum: number
+  inventoryNum: number,
+  categoryId: number | null
 ): Promise<InventoryItem | null> {
   const client = await pool.connect();
 
   try {
     const result = await client.query<InventoryRow>(
       `UPDATE inventory
-       SET name = $2, cost = $3, inventorynum = $4
+       SET name = $2, cost = $3, inventorynum = $4, category_id = $5
        WHERE inventoryid = $1
-       RETURNING inventoryid, name, cost, inventorynum, useaverage;`,
-      [inventoryId, name, cost, inventoryNum]
+       RETURNING
+        inventoryid,
+        name,
+        cost,
+        inventorynum,
+        useaverage,
+        category_id,
+        NULL::text AS category_name,
+        is_active,
+        archived_at;`,
+      [inventoryId, name, cost, inventoryNum, categoryId]
     );
 
     const row = result.rows[0];
@@ -90,7 +152,8 @@ export async function createInventoryItem(
   name: string,
   cost: number,
   inventoryNum: number,
-  useAverage: number
+  useAverage: number,
+  categoryId: number | null
 ): Promise<InventoryItem> {
   const client = await pool.connect();
 
@@ -98,10 +161,19 @@ export async function createInventoryItem(
     await syncInventorySequence(client);
 
     const result = await client.query<InventoryRow>(
-      `INSERT INTO inventory (name, cost, inventorynum, useaverage)
-       VALUES ($1, $2, $3, $4)
-       RETURNING inventoryid, name, cost, inventorynum, useaverage;`,
-      [name, cost, inventoryNum, useAverage]
+      `INSERT INTO inventory (name, cost, inventorynum, useaverage, category_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING
+        inventoryid,
+        name,
+        cost,
+        inventorynum,
+        useaverage,
+        category_id,
+        NULL::text AS category_name,
+        is_active,
+        archived_at;`,
+      [name, cost, inventoryNum, useAverage, categoryId]
     );
 
     return mapInventoryRow(result.rows[0]);
@@ -112,7 +184,7 @@ export async function createInventoryItem(
 
 export async function deleteInventoryItem(
   inventoryId: number
-): Promise<{ deleted: boolean; inUse: boolean }> {
+): Promise<{ deleted: boolean; archived: boolean; inUse: boolean }> {
   const client = await pool.connect();
 
   try {
@@ -122,7 +194,18 @@ export async function deleteInventoryItem(
     );
 
     if (Number(usageResult.rows[0]?.count ?? 0) > 0) {
-      return { deleted: false, inUse: true };
+      const archiveResult = await client.query(
+        `UPDATE inventory
+         SET is_active = false, archived_at = NOW()
+         WHERE inventoryid = $1;`,
+        [inventoryId]
+      );
+
+      return {
+        deleted: false,
+        archived: (archiveResult.rowCount ?? 0) > 0,
+        inUse: true,
+      };
     }
 
     const deleteResult = await client.query(
@@ -130,7 +213,122 @@ export async function deleteInventoryItem(
       [inventoryId]
     );
 
-    return { deleted: (deleteResult.rowCount ?? 0) > 0, inUse: false };
+    return {
+      deleted: (deleteResult.rowCount ?? 0) > 0,
+      archived: false,
+      inUse: false,
+    };
+  } finally {
+    client.release();
+  }
+}
+
+export async function restoreInventoryItem(inventoryId: number) {
+  const result = await pool.query(
+    `UPDATE inventory
+     SET is_active = true, archived_at = NULL
+     WHERE inventoryid = $1;`,
+    [inventoryId]
+  );
+
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function getInventoryCategories(includeInactive = false) {
+  const result = await pool.query<InventoryCategoryRow>(
+    `SELECT category_id, name, display_order, is_active
+     FROM inventory_categories
+     WHERE $1::boolean OR COALESCE(is_active, true) = true
+     ORDER BY display_order ASC, name ASC;`,
+    [includeInactive]
+  );
+
+  return result.rows.map(mapInventoryCategoryRow);
+}
+
+export async function createInventoryCategory(input: {
+  name: string;
+}) {
+  const nextOrderResult = await pool.query<{ next_order: number }>(
+    `SELECT COALESCE(MAX(display_order), 0) + 1 AS next_order
+     FROM inventory_categories;`
+  );
+  const nextOrder = Number(nextOrderResult.rows[0]?.next_order ?? 1);
+
+  const result = await pool.query<InventoryCategoryRow>(
+    `INSERT INTO inventory_categories (name, display_order, is_active)
+     VALUES ($1, $2, true)
+     RETURNING category_id, name, display_order, is_active;`,
+    [input.name, nextOrder]
+  );
+
+  return mapInventoryCategoryRow(result.rows[0]);
+}
+
+export async function updateInventoryCategory(
+  categoryId: number,
+  input: { name: string; isActive: boolean }
+) {
+  const result = await pool.query<InventoryCategoryRow>(
+    `UPDATE inventory_categories
+     SET name = $2, is_active = $3
+     WHERE category_id = $1
+     RETURNING category_id, name, display_order, is_active;`,
+    [categoryId, input.name, input.isActive]
+  );
+
+  return result.rows[0] ? mapInventoryCategoryRow(result.rows[0]) : null;
+}
+
+export async function deleteInventoryCategory(categoryId: number) {
+  const usageResult = await pool.query<{ count: string }>(
+    'SELECT COUNT(*) AS count FROM inventory WHERE category_id = $1;',
+    [categoryId]
+  );
+
+  if (Number(usageResult.rows[0]?.count ?? 0) > 0) {
+    const updated = await pool.query<InventoryCategoryRow>(
+      `UPDATE inventory_categories
+       SET is_active = false
+       WHERE category_id = $1
+       RETURNING category_id, name, display_order, is_active;`,
+      [categoryId]
+    );
+
+    return {
+      deleted: false,
+      category: updated.rows[0] ? mapInventoryCategoryRow(updated.rows[0]) : null,
+    };
+  }
+
+  const deleted = await pool.query(
+    'DELETE FROM inventory_categories WHERE category_id = $1;',
+    [categoryId]
+  );
+
+  return { deleted: (deleted.rowCount ?? 0) > 0, category: null };
+}
+
+export async function reorderInventoryCategories(categoryIds: number[]) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    for (const [index, categoryId] of categoryIds.entries()) {
+      await client.query(
+        `UPDATE inventory_categories
+         SET display_order = $2
+         WHERE category_id = $1;`,
+        [categoryId, index + 1]
+      );
+    }
+
+    await client.query('COMMIT');
+    return getInventoryCategories(true);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
   } finally {
     client.release();
   }

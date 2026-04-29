@@ -46,6 +46,7 @@ type InventoryLookupRow = {
   inventoryid: number;
   name: string;
   inventorynum: number | string | null;
+  is_active?: boolean | null;
 };
 
 const CUP_INVENTORY_ID_SET = new Set(Object.values(CUP_INVENTORY_IDS));
@@ -215,7 +216,7 @@ async function validateOrderInventory(
   const unavailableItems: UnavailableOrderItem[] = [];
 
   const inventoryResult = await connection.query<InventoryLookupRow>(
-    'SELECT inventoryid, name, inventorynum FROM inventory FOR UPDATE;'
+    'SELECT inventoryid, name, inventorynum, is_active FROM inventory FOR UPDATE;'
   );
   const inventoryRows = inventoryResult.rows;
 
@@ -237,7 +238,8 @@ async function validateOrderInventory(
      FROM menu
      LEFT JOIN menu_items AS menu_item ON menu_item.menuid = menu.menuid
      LEFT JOIN inventory ON inventory.inventoryid = menu_item.inventoryid
-     WHERE menu.menuid = ANY($1::int[]);`,
+     WHERE menu.menuid = ANY($1::int[])
+       AND COALESCE(menu.is_active, true) = true;`,
     [items.map((item) => item.menuid)]
   );
 
@@ -297,7 +299,10 @@ async function validateOrderInventory(
         ingredientName:
           inventoryItem?.name ?? row.ingredientname ?? `Inventory item #${inventoryId}`,
         requested,
-        available: Number(inventoryItem?.inventorynum ?? 0),
+        available:
+          inventoryItem?.is_active === false
+            ? 0
+            : Number(inventoryItem?.inventorynum ?? 0),
         orderItems: new Map([
           [
             orderItemName,
@@ -343,7 +348,10 @@ async function validateOrderInventory(
       requiredByInventory.set(inventoryItem.inventoryid, {
         ingredientName: inventoryItem.name,
         requested: itemQuantity,
-        available: Number(inventoryItem.inventorynum ?? 0),
+        available:
+          inventoryItem.is_active === false
+            ? 0
+            : Number(inventoryItem.inventorynum ?? 0),
         orderItems: new Map([
           [
             topping,
@@ -447,7 +455,8 @@ async function decrementToppingInventory(
     inventoryid: number;
     name: string;
     inventorynum: number | string | null;
-  }>('SELECT inventoryid, name, inventorynum FROM inventory;');
+    is_active: boolean | null;
+  }>('SELECT inventoryid, name, inventorynum, is_active FROM inventory;');
 
   for (const topping of toppings) {
     const matchingInventoryItem = findToppingInventoryItem(inventoryResult.rows, topping);

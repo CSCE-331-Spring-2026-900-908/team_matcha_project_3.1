@@ -16,7 +16,6 @@ import {
   type MenuItem,
   type CartItem,
 } from '@/components/pos-types';
-import { MENU_CATEGORY_LABELS } from '@/lib/menu-categories';
 
 type ModalState =
   | { mode: 'add'; item: MenuItem }
@@ -81,13 +80,15 @@ function EmployeePOSContent() {
   }, [router]);
 
   const categories = useMemo(() => {
-    const itemCategories = new Set(items.map((item) => categorizeItem(item.name)));
-    return ['All', ...MENU_CATEGORY_LABELS.filter((category) => itemCategories.has(category))];
+    const itemCategories = Array.from(
+      new Set(items.map((item) => categorizeItem(item)))
+    ).sort((first, second) => first.localeCompare(second));
+    return ['All', ...itemCategories];
   }, [items]);
 
   const filteredItems = useMemo(() => {
     if (activeCategory === 'All') return items;
-    return items.filter((item) => categorizeItem(item.name) === activeCategory);
+    return items.filter((item) => categorizeItem(item) === activeCategory);
   }, [items, activeCategory]);
 
   const closeModal = () => setModalState(null);

@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { authFetch } from '@/lib/fetch-utils';
 
 type Employee = {
@@ -43,6 +44,7 @@ export default function EmployeesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -81,6 +83,10 @@ export default function EmployeesPage() {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
   }, []);
 
   function updateForm(field: keyof EmployeeForm, value: string) {
@@ -306,9 +312,6 @@ export default function EmployeesPage() {
                         <div className="font-bold text-[#2f241d]">
                           {employee.name}
                         </div>
-                        <div className="text-xs text-[#8a6240]">
-                          #{employee.employeeid}
-                        </div>
                       </td>
                       <td className="px-8 py-5">
                         <div className="text-sm text-[#2f241d]">
@@ -354,9 +357,10 @@ export default function EmployeesPage() {
         </div>
       </div>
 
-      {isModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-3xl bg-white rounded-[32px] p-8 shadow-2xl">
+      {isMounted && isModalOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto bg-white rounded-[32px] p-8 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-[#2f241d]">
                 {editingEmployee ? 'Edit Employee' : 'Create New Employee'}
@@ -459,8 +463,10 @@ export default function EmployeesPage() {
               </div>
             </form>
           </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body
+          )
+        : null}
     </section>
   );
 }

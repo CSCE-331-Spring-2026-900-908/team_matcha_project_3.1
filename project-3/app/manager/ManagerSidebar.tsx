@@ -26,10 +26,16 @@ const tools: Array<{
     description: 'Run read-only X reports and one-time daily Z closeout.',
   },
   {
+    id: 'menu',
+    eyebrow: 'Recipes and categories',
+    title: 'Menu',
+    description: 'Add, edit, archive, and restore sellable menu items.',
+  },
+  {
     id: 'inventory',
     eyebrow: 'Live stock view',
     title: 'Inventory',
-    description: 'Manager inventory page.',
+    description: 'Stock levels, item types, and archive controls.',
   },
   {
     id: 'employees',

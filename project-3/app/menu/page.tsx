@@ -2,14 +2,19 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { MenuItem as SharedMenuItem } from '@/components/pos-types';
-import {
-  categorizeMenuItem,
-  MENU_CATEGORIES,
-  type MenuCategoryKey,
-} from '@/lib/menu-categories';
+import { categorizeMenuItem } from '@/lib/menu-categories';
 import { AVAILABLE_TOPPINGS, TOPPING_COSTS } from '@/lib/toppings';
 
-type MenuItem = Pick<SharedMenuItem, 'menuid' | 'name' | 'cost'>;
+type MenuItem = Pick<
+  SharedMenuItem,
+  'menuid' | 'name' | 'cost' | 'category_label' | 'category_color'
+>;
+
+type BoardCategory = {
+  label: string;
+  color: string;
+  items: MenuItem[];
+};
 
 const sweetnessLevels = ['0%', '25%', '50%', '75%', '100%', '125%'];
 const iceLevels = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
@@ -74,26 +79,30 @@ export default function MenuPage() {
     };
   }, []);
 
-  const groupedItems = useMemo(() => {
-    return items.reduce<Record<MenuCategoryKey, MenuItem[]>>(
-      (groups, item) => {
-        const category = categorizeMenuItem(item.name);
+  const groupedItems = useMemo<BoardCategory[]>(() => {
+    const groups = new Map<string, BoardCategory>();
 
-        if (category) {
-          groups[category.key].push(item);
-        }
+    for (const item of items) {
+      const fallbackCategory = categorizeMenuItem(item.name);
+      const label = item.category_label ?? fallbackCategory?.label ?? 'Other';
+      const color = item.category_color ?? fallbackCategory?.color ?? '#667463';
+      const current = groups.get(label) ?? { label, color, items: [] };
 
-        return groups;
-      },
-      { milkTeas: [], fruitTeas: [], greenOolongTeas: [] }
+      current.items.push(item);
+      groups.set(label, current);
+    }
+
+    return Array.from(groups.values()).sort((first, second) =>
+      first.label.localeCompare(second.label)
     );
   }, [items]);
 
-  function renderCategory(category: (typeof MENU_CATEGORIES)[number]) {
-    const categoryItems = groupedItems[category.key];
-
+  function renderCategory(category: BoardCategory) {
     return (
-      <section className="grid min-h-0 grid-rows-[auto_1fr] overflow-hidden">
+      <section
+        key={category.label}
+        className="grid min-h-0 grid-rows-[auto_1fr] overflow-hidden"
+      >
         <div
           className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-[0.5vw] border-b-[0.12vw] border-[#454039] pb-[0.3vw]"
           style={{ color: category.color }}
@@ -107,7 +116,7 @@ export default function MenuPage() {
         </div>
 
         <ol className="grid min-h-0 auto-rows-min content-start gap-[0.42vw] overflow-hidden pt-[0.5vw]">
-          {categoryItems.map((item, index) => (
+          {category.items.map((item, index) => (
             <li
               key={item.menuid}
               className="grid min-w-0 grid-cols-[1.7vw_minmax(0,1fr)_auto] items-center gap-[0.45vw] rounded-[0.45vw] border border-transparent px-[0.25vw]"
@@ -163,12 +172,8 @@ export default function MenuPage() {
                 {menuError}
               </div>
             ) : (
-              <div className="grid h-full min-h-0 grid-cols-[1.45fr_1fr] gap-x-[1.8vw] overflow-hidden">
-                {renderCategory(MENU_CATEGORIES[0])}
-                <div className="grid min-h-0 auto-rows-min content-start gap-y-[1.2vw] overflow-hidden">
-                  {renderCategory(MENU_CATEGORIES[1])}
-                  {renderCategory(MENU_CATEGORIES[2])}
-                </div>
+              <div className="grid h-full min-h-0 grid-cols-2 gap-x-[1.8vw] gap-y-[1.2vw] overflow-hidden">
+                {groupedItems.map(renderCategory)}
               </div>
             )}
           </div>

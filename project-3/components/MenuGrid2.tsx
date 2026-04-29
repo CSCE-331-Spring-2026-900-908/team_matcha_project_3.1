@@ -45,7 +45,7 @@ export default function MenuGrid({
               <div className="flex flex-1 flex-col p-4 text-left">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-bold uppercase text-[#8a6240] opacity-70">
-                    {categorizeItem(item.name)}
+                    {categorizeItem(item)}
                   </span>
                   {stockLabel ? (
                     <span

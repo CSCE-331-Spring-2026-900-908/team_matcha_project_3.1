@@ -88,6 +88,14 @@ export async function getAssistantMenu() {
 export async function getAssistantToppings() {
   try {
     const inventory = await getInventoryItems();
+    const inventoryToppings = inventory
+      .filter(
+        (item) => item.categoryName?.toLowerCase() === 'toppings' && item.isActive
+      )
+      .map((item) => ({ name: item.name, cost: item.cost }));
+
+    if (inventoryToppings.length > 0) return inventoryToppings;
+
     const toppings = AVAILABLE_TOPPINGS.map((topping) => {
       const normalizedTopping = normalizeToppingName(topping);
       const inventoryItem = inventory.find((item) => {

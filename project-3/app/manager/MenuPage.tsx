@@ -4,9 +4,10 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { authFetch } from '@/lib/fetch-utils';
 
-type InventoryCategory = {
+type MenuCategory = {
   categoryId: number;
   name: string;
+  color: string;
   displayOrder: number;
   isActive: boolean;
 };
@@ -16,42 +17,81 @@ type InventoryItem = {
   name: string;
   cost: number;
   inventoryNum: number;
-  useAverage: number;
-  daysLeft: number | null;
-  categoryId: number | null;
   categoryName: string | null;
   isActive: boolean;
-  archivedAt: string | null;
 };
 
-type InventoryForm = {
+type RecipeIngredient = {
+  id: number;
+  inventoryId: number;
+  inventoryName: string;
+  itemQuantity: number;
+  inventoryIsActive: boolean;
+};
+
+type ManagerMenuItem = {
+  menuId: number;
+  name: string;
+  cost: number;
+  salesNum: number;
+  imageUrl: string | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  categoryColor: string | null;
+  isActive: boolean;
+  archivedAt: string | null;
+  recipe: RecipeIngredient[];
+};
+
+type RecipeFormRow = {
+  key: string;
+  inventoryId: string;
+  itemQuantity: string;
+};
+
+type MenuForm = {
   name: string;
   cost: string;
-  inventoryNum: string;
+  imageUrl: string;
   categoryId: string;
+  recipe: RecipeFormRow[];
 };
 
 type CategoryForm = {
   name: string;
+  color: string;
 };
 
-const emptyInventoryForm: InventoryForm = {
+const emptyMenuForm: MenuForm = {
   name: '',
   cost: '',
-  inventoryNum: '',
+  imageUrl: '',
   categoryId: '',
+  recipe: [],
 };
 
 const emptyCategoryForm: CategoryForm = {
   name: '',
+  color: '#667463',
 };
+
+const categoryColorPresets = [
+  '#b65a53',
+  '#c77a3a',
+  '#d6a84f',
+  '#6d8a6f',
+  '#3f8a7a',
+  '#4f7fa8',
+  '#6b6fa8',
+  '#a65a78',
+];
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
 });
 
-function sortCategories(categories: InventoryCategory[]) {
+function sortCategories(categories: MenuCategory[]) {
   return [...categories].sort(
     (first, second) =>
       first.displayOrder - second.displayOrder ||
@@ -59,49 +99,39 @@ function sortCategories(categories: InventoryCategory[]) {
   );
 }
 
-function getStockStatus(item: InventoryItem) {
-  if (item.inventoryNum === 0) {
-    return {
-      label: 'Out of Stock',
-      rowClassName: 'border-[#d98f86] bg-[#fff0ed] text-[#5f241d]',
-      badgeClassName: 'border-[#b85d53] bg-[#c94335] text-white',
-    };
-  }
-
-  const isLowStock =
-    item.inventoryNum <= 100 || (item.daysLeft !== null && item.daysLeft <= 14);
-
-  if (isLowStock) {
-    return {
-      label: 'Low Stock',
-      rowClassName: 'border-[#e0c46f] bg-[#fff8d7] text-[#4f3d0c]',
-      badgeClassName: 'border-[#b98d1f] bg-[#b98712] text-white',
-    };
-  }
-
-  return null;
+function buildRecipeRow(ingredient?: RecipeIngredient): RecipeFormRow {
+  return {
+    key: `${ingredient?.id ?? 'new'}-${crypto.randomUUID()}`,
+    inventoryId: ingredient ? String(ingredient.inventoryId) : '',
+    itemQuantity: ingredient ? String(ingredient.itemQuantity) : '1',
+  };
 }
 
-export default function InventoryPage() {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [categories, setCategories] = useState<InventoryCategory[]>([]);
+function getInventoryName(inventory: InventoryItem[], inventoryId: string) {
+  const id = Number(inventoryId);
+  return inventory.find((item) => item.inventoryId === id)?.name ?? 'Ingredient';
+}
+
+export default function MenuPage() {
+  const [items, setItems] = useState<ManagerMenuItem[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [filter, setFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-  const [isSavingItem, setIsSavingItem] = useState(false);
-  const [itemForm, setItemForm] = useState<InventoryForm>(emptyInventoryForm);
-  const [categoryForm, setCategoryForm] =
-    useState<CategoryForm>(emptyCategoryForm);
-  const [editingCategory, setEditingCategory] =
-    useState<InventoryCategory | null>(null);
+  const [editingItem, setEditingItem] = useState<ManagerMenuItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form, setForm] = useState<MenuForm>(emptyMenuForm);
+  const [categoryForm, setCategoryForm] = useState<CategoryForm>(emptyCategoryForm);
+  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [draftCategories, setDraftCategories] = useState<InventoryCategory[]>([]);
+  const [draftCategories, setDraftCategories] = useState<MenuCategory[]>([]);
   const [draggedCategoryId, setDraggedCategoryId] = useState<number | null>(null);
+  const [isColorPanelOpen, setIsColorPanelOpen] = useState(false);
   const categoryNameInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
@@ -109,22 +139,24 @@ export default function InventoryPage() {
     setError(null);
 
     try {
-      const [inventoryResponse, categoryResponse] = await Promise.all([
+      const [menuResponse, categoryResponse, inventoryResponse] = await Promise.all([
+        authFetch('/api/manager/menu?includeArchived=true'),
+        authFetch('/api/manager/menu/categories?includeInactive=true'),
         authFetch('/api/manager/inventory?includeArchived=true'),
-        authFetch('/api/manager/inventory/categories?includeInactive=true'),
       ]);
 
-      if (!inventoryResponse.ok || !categoryResponse.ok) {
-        throw new Error('Failed to load inventory data.');
+      if (!menuResponse.ok || !categoryResponse.ok || !inventoryResponse.ok) {
+        throw new Error('Failed to load menu manager data.');
       }
 
-      setItems(await inventoryResponse.json());
+      setItems(await menuResponse.json());
       setCategories(sortCategories(await categoryResponse.json()));
+      setInventory(await inventoryResponse.json());
     } catch (loadError) {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : 'Failed to load inventory data.'
+          : 'Failed to load menu manager data.'
       );
     } finally {
       setIsLoading(false);
@@ -150,6 +182,11 @@ export default function InventoryPage() {
     [categories]
   );
 
+  const activeInventory = useMemo(
+    () => inventory.filter((item) => item.isActive),
+    [inventory]
+  );
+
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       if (filter === 'active' && !item.isActive) return false;
@@ -167,111 +204,153 @@ export default function InventoryPage() {
 
   function openCreateModal() {
     setEditingItem(null);
-    setItemForm({
-      ...emptyInventoryForm,
+    setForm({
+      ...emptyMenuForm,
       categoryId: activeCategories[0]
         ? String(activeCategories[0].categoryId)
         : '',
+      recipe: [buildRecipeRow()],
     });
     setError(null);
     setNotice(null);
-    setIsItemModalOpen(true);
+    setIsModalOpen(true);
   }
 
-  function openEditModal(item: InventoryItem) {
+  function openEditModal(item: ManagerMenuItem) {
     setEditingItem(item);
-    setItemForm({
+    setForm({
       name: item.name,
       cost: item.cost.toFixed(2),
-      inventoryNum: String(item.inventoryNum),
+      imageUrl: item.imageUrl ?? '',
       categoryId: item.categoryId ? String(item.categoryId) : '',
+      recipe:
+        item.recipe.length > 0
+          ? item.recipe.map(buildRecipeRow)
+          : [buildRecipeRow()],
     });
     setError(null);
     setNotice(null);
-    setIsItemModalOpen(true);
+    setIsModalOpen(true);
   }
 
-  function closeItemModal() {
-    if (isSavingItem) return;
+  function closeModal() {
+    if (isSaving) return;
+    setIsModalOpen(false);
     setEditingItem(null);
-    setItemForm(emptyInventoryForm);
-    setIsItemModalOpen(false);
+    setForm(emptyMenuForm);
   }
 
-  function updateItemForm(field: keyof InventoryForm, value: string) {
-    setItemForm((current) => ({ ...current, [field]: value }));
+  function updateForm(field: keyof MenuForm, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function parseItemForm() {
-    const name = itemForm.name.trim();
-    const cost = Number(itemForm.cost);
-    const inventoryNum = Number(itemForm.inventoryNum);
-    const categoryId = itemForm.categoryId ? Number(itemForm.categoryId) : null;
+  function updateRecipeRow(
+    key: string,
+    field: keyof Omit<RecipeFormRow, 'key'>,
+    value: string
+  ) {
+    setForm((current) => ({
+      ...current,
+      recipe: current.recipe.map((row) =>
+        row.key === key ? { ...row, [field]: value } : row
+      ),
+    }));
+  }
 
-    if (
-      !name ||
-      !Number.isFinite(cost) ||
-      !Number.isFinite(inventoryNum) ||
-      cost < 0 ||
-      inventoryNum < 0
-    ) {
+  function addRecipeRow() {
+    setForm((current) => ({
+      ...current,
+      recipe: [...current.recipe, buildRecipeRow()],
+    }));
+  }
+
+  function removeRecipeRow(key: string) {
+    setForm((current) => ({
+      ...current,
+      recipe: current.recipe.filter((row) => row.key !== key),
+    }));
+  }
+
+  function parseMenuForm() {
+    const name = form.name.trim();
+    const cost = Number(form.cost);
+    const categoryId = form.categoryId ? Number(form.categoryId) : null;
+    const recipe = form.recipe
+      .map((row) => ({
+        inventoryId: Number(row.inventoryId),
+        itemQuantity: Number(row.itemQuantity),
+      }))
+      .filter(
+        (row) =>
+          Number.isInteger(row.inventoryId) &&
+          row.inventoryId > 0 &&
+          Number.isFinite(row.itemQuantity) &&
+          row.itemQuantity > 0
+      );
+
+    if (!name || !Number.isFinite(cost) || cost < 0) {
       return null;
     }
 
     return {
       name,
       cost,
-      inventoryNum: Math.floor(inventoryNum),
+      imageUrl: form.imageUrl.trim() || null,
       categoryId,
+      recipe,
     };
   }
 
-  async function handleItemSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleMenuSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const input = parseItemForm();
+    const input = parseMenuForm();
 
     if (!input) {
-      setError('Enter a name, valid cost, and stock amount.');
+      setError('Enter a menu item name, valid price, and recipe ingredients.');
       setNotice(null);
       return;
     }
 
-    setIsSavingItem(true);
+    setIsSaving(true);
     setError(null);
     setNotice(null);
 
     try {
-      const response = await authFetch('/api/manager/inventory', {
+      const response = await authFetch('/api/manager/menu', {
         method: editingItem ? 'PATCH' : 'POST',
         body: JSON.stringify(
-          editingItem
-            ? { inventoryId: editingItem.inventoryId, ...input }
-            : input
+          editingItem ? { menuId: editingItem.menuId, ...input } : input
         ),
       });
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save inventory item.');
+        throw new Error(data.error || 'Failed to save menu item.');
       }
 
-      await loadData();
-      setNotice(editingItem ? 'Inventory item updated.' : 'Inventory item added.');
-      closeItemModal();
+      if (editingItem) {
+        setItems((current) =>
+          current.map((item) => (item.menuId === data.menuId ? data : item))
+        );
+        setNotice('Menu item updated.');
+      } else {
+        setItems((current) => [...current, data]);
+        setNotice('Menu item created.');
+      }
+
+      closeModal();
     } catch (saveError) {
       setError(
-        saveError instanceof Error
-          ? saveError.message
-          : 'Failed to save inventory item.'
+        saveError instanceof Error ? saveError.message : 'Failed to save menu item.'
       );
     } finally {
-      setIsSavingItem(false);
+      setIsSaving(false);
     }
   }
 
-  async function deleteInventoryItem(item: InventoryItem) {
+  async function deleteMenuItem(item: ManagerMenuItem) {
     const confirmed = window.confirm(
-      `${item.isActive ? 'Delete or archive' : 'Delete'} ${item.name}? Recipe-used items will be archived.`
+      `${item.isActive ? 'Delete or archive' : 'Delete'} ${item.name}? Used items will be archived instead of removed.`
     );
 
     if (!confirmed) return;
@@ -280,64 +359,72 @@ export default function InventoryPage() {
     setNotice(null);
 
     try {
-      const response = await authFetch('/api/manager/inventory', {
+      const response = await authFetch('/api/manager/menu', {
         method: 'DELETE',
-        body: JSON.stringify({ inventoryId: item.inventoryId }),
+        body: JSON.stringify({ menuId: item.menuId }),
       });
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete inventory item.');
+        throw new Error(data.error || 'Failed to delete menu item.');
       }
 
-      await loadData();
-      setNotice(data.deleted ? 'Inventory item deleted.' : 'Inventory item archived.');
-      closeItemModal();
+      if (data.deleted) {
+        setItems((current) =>
+          current.filter((currentItem) => currentItem.menuId !== item.menuId)
+        );
+        setNotice('Menu item deleted.');
+      } else {
+        await loadData();
+        setNotice('Menu item archived.');
+      }
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : 'Failed to delete inventory item.'
+          : 'Failed to delete menu item.'
       );
     }
   }
 
-  async function restoreInventoryItem(item: InventoryItem) {
+  async function restoreMenuItem(item: ManagerMenuItem) {
     setError(null);
     setNotice(null);
 
     try {
-      const response = await authFetch('/api/manager/inventory/restore', {
+      const response = await authFetch('/api/manager/menu/restore', {
         method: 'POST',
-        body: JSON.stringify({ inventoryId: item.inventoryId }),
+        body: JSON.stringify({ menuId: item.menuId }),
       });
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to restore inventory item.');
+        throw new Error(data.error || 'Failed to restore menu item.');
       }
 
       await loadData();
-      setNotice('Inventory item restored.');
+      setNotice('Menu item restored.');
     } catch (restoreError) {
       setError(
         restoreError instanceof Error
           ? restoreError.message
-          : 'Failed to restore inventory item.'
+          : 'Failed to restore menu item.'
       );
     }
   }
 
-  function startCategoryEdit(category: InventoryCategory) {
+  function startCategoryEdit(category: MenuCategory) {
     setEditingCategory(category);
     setCategoryForm({
       name: category.name,
+      color: category.color,
     });
   }
 
   function resetCategoryForm() {
     setEditingCategory(null);
     setCategoryForm(emptyCategoryForm);
+    setIsColorPanelOpen(false);
   }
 
   async function handleCategorySubmit(event: FormEvent<HTMLFormElement>) {
@@ -346,7 +433,7 @@ export default function InventoryPage() {
     const name = categoryForm.name.trim();
 
     if (!name) {
-      setError('Enter a type name.');
+      setError('Enter a category name.');
       setNotice(null);
       return;
     }
@@ -355,11 +442,12 @@ export default function InventoryPage() {
     setNotice(null);
 
     try {
-      const response = await authFetch('/api/manager/inventory/categories', {
+      const response = await authFetch('/api/manager/menu/categories', {
         method: editingCategory ? 'PATCH' : 'POST',
         body: JSON.stringify({
           categoryId: editingCategory?.categoryId,
           name,
+          color: categoryForm.color || '#667463',
           isActive: editingCategory?.isActive ?? true,
         }),
       });
@@ -369,9 +457,17 @@ export default function InventoryPage() {
         throw new Error(data.error || 'Failed to save category.');
       }
 
-      await loadData();
+      setCategories((current) =>
+        sortCategories(
+          editingCategory
+            ? current.map((category) =>
+                category.categoryId === data.categoryId ? data : category
+              )
+            : [...current, data]
+        )
+      );
       resetCategoryForm();
-      setNotice(editingCategory ? 'Inventory type updated.' : 'Inventory type added.');
+      setNotice(editingCategory ? 'Category updated.' : 'Category created.');
     } catch (categoryError) {
       setError(
         categoryError instanceof Error
@@ -381,9 +477,9 @@ export default function InventoryPage() {
     }
   }
 
-  async function deleteCategory(category: InventoryCategory) {
+  async function deleteCategory(category: MenuCategory) {
     const confirmed = window.confirm(
-      `Remove ${category.name}? Types used by inventory items will be deactivated.`
+      `Remove ${category.name}? Categories used by menu items will be deactivated.`
     );
 
     if (!confirmed) return;
@@ -392,7 +488,7 @@ export default function InventoryPage() {
     setNotice(null);
 
     try {
-      const response = await authFetch('/api/manager/inventory/categories', {
+      const response = await authFetch('/api/manager/menu/categories', {
         method: 'DELETE',
         body: JSON.stringify({ categoryId: category.categoryId }),
       });
@@ -406,7 +502,7 @@ export default function InventoryPage() {
       setDraftCategories((current) =>
         current.filter((item) => item.categoryId !== category.categoryId)
       );
-      setNotice(data.deleted ? 'Inventory type deleted.' : 'Inventory type deactivated.');
+      setNotice(data.deleted ? 'Category deleted.' : 'Category deactivated.');
     } catch (categoryError) {
       setError(
         categoryError instanceof Error
@@ -443,7 +539,7 @@ export default function InventoryPage() {
     setNotice(null);
 
     try {
-      const response = await authFetch('/api/manager/inventory/categories/reorder', {
+      const response = await authFetch('/api/manager/menu/categories/reorder', {
         method: 'POST',
         body: JSON.stringify({
           categoryIds: draftCategories.map((category) => category.categoryId),
@@ -452,17 +548,17 @@ export default function InventoryPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save type order.');
+        throw new Error(data.error || 'Failed to save category order.');
       }
 
       setCategories(sortCategories(data));
       setIsCategoryModalOpen(false);
-      setNotice('Inventory type order updated.');
+      setNotice('Category order updated.');
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : 'Failed to save type order.'
+          : 'Failed to save category order.'
       );
     }
   }
@@ -473,10 +569,10 @@ export default function InventoryPage() {
         <div className="flex flex-col gap-5 border-b border-[#dbe4d6] pb-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#667463]">
-              Inventory
+              Menu
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#223020] sm:text-4xl">
-              Stock items and inventory types
+              Items, categories, and recipes
             </h2>
           </div>
           <button
@@ -484,7 +580,7 @@ export default function InventoryPage() {
             onClick={openCreateModal}
             className="inline-flex items-center justify-center self-start rounded-full bg-[#3f8a5a] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(63,138,90,0.18)] transition hover:bg-[#34784d]"
           >
-            New Item
+            New Menu Item
           </button>
         </div>
 
@@ -502,14 +598,14 @@ export default function InventoryPage() {
         <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto_auto] lg:items-end">
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-              Type
+              Category
             </label>
             <select
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
               className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-white px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
             >
-              <option value="all">All types</option>
+              <option value="all">All categories</option>
               {categories.map((category) => (
                 <option key={category.categoryId} value={category.categoryId}>
                   {category.name}
@@ -538,16 +634,16 @@ export default function InventoryPage() {
 
         <details className="mt-5 rounded-[24px] border border-[#d9e3d5] bg-white p-4">
           <summary className="cursor-pointer text-sm font-bold uppercase tracking-[0.18em] text-[#667463]">
-            Manage Inventory Types
+            Manage Categories
           </summary>
           <div className="mt-5 space-y-3">
             <form
               onSubmit={handleCategorySubmit}
-              className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]"
+              className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:items-end"
             >
               <label className="space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7a8777]">
-                  Type Name
+                  Category Name
                 </span>
                 <input
                   ref={categoryNameInputRef}
@@ -563,28 +659,93 @@ export default function InventoryPage() {
                       ? 'border-[#3f8a5a] bg-[#eef8ef] shadow-[0_0_0_3px_rgba(63,138,90,0.14)]'
                       : 'border-[#d8e2d3] bg-[#fbfdfb]'
                   }`}
-                  placeholder="Type name"
+                  placeholder="Category name"
                 />
               </label>
-              <button
-                type="submit"
-                className="h-[50px] self-end rounded-full bg-[#3f8a5a] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(63,138,90,0.18)] transition hover:bg-[#34784d]"
-              >
-                {editingCategory ? 'Save Type' : 'Add Type'}
-              </button>
-              <button
-                type="button"
-                onClick={openCategoryModal}
-                className="h-[50px] self-end rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3]"
-              >
-                Edit Types
-              </button>
+              <div className="relative self-end">
+                <button
+                  type="button"
+                  onClick={() => setIsColorPanelOpen((current) => !current)}
+                  className="grid h-[50px] w-[50px] place-items-center rounded-full bg-transparent transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#9db59a]/35"
+                  aria-expanded={isColorPanelOpen}
+                  aria-label="Choose category color"
+                  title="Choose category color"
+                >
+                  <span
+                    className="h-9 w-9 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(34,48,32,0.14),0_8px_18px_rgba(34,48,32,0.14)]"
+                    style={{ backgroundColor: categoryForm.color }}
+                  />
+                </button>
+                {isColorPanelOpen ? (
+                  <div className="absolute right-0 z-20 mt-2 w-72 rounded-[18px] border border-[#d8e2d3] bg-white p-4 shadow-[0_18px_42px_rgba(31,37,32,0.16)]">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#7a8777]">
+                      Presets
+                    </p>
+                    <div className="mt-3 grid grid-cols-8 gap-2">
+                      {categoryColorPresets.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => {
+                            setCategoryForm((current) => ({ ...current, color }));
+                            setIsColorPanelOpen(false);
+                          }}
+                          className={`h-8 w-8 rounded-full border-2 transition hover:scale-110 ${
+                            categoryForm.color.toLowerCase() === color.toLowerCase()
+                              ? 'border-[#223020] shadow-[0_0_0_2px_rgba(63,138,90,0.18)]'
+                              : 'border-white shadow-[0_0_0_1px_rgba(34,48,32,0.12)]'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          aria-label={`Use category color ${color}`}
+                          title={color.toUpperCase()}
+                        />
+                      ))}
+                    </div>
+                    <label
+                      className="mt-4 flex cursor-pointer items-center justify-between rounded-[14px] border border-[#d8e2d3] bg-[#fbfdfb] px-3 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3]"
+                      title="Pick custom category color"
+                    >
+                      <span>Custom color</span>
+                      <span
+                        className="h-7 w-7 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(34,48,32,0.14)]"
+                        style={{ backgroundColor: categoryForm.color }}
+                      />
+                      <input
+                        type="color"
+                        value={categoryForm.color}
+                        onChange={(event) =>
+                          setCategoryForm((current) => ({
+                            ...current,
+                            color: event.target.value,
+                          }))
+                        }
+                        className="sr-only"
+                        aria-label="Custom category color"
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-3 self-end sm:flex-row xl:justify-end">
+                <button
+                  type="submit"
+                  className="inline-flex h-[50px] items-center justify-center rounded-full bg-[#3f8a5a] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(63,138,90,0.18)] transition hover:bg-[#34784d]"
+                >
+                  {editingCategory ? 'Save Category' : 'Add Category'}
+                </button>
+                <button
+                  type="button"
+                  onClick={openCategoryModal}
+                  className="inline-flex h-[50px] items-center justify-center rounded-full border border-[#b9c8b4] bg-[#f8fbf7] px-5 py-2 text-sm font-semibold text-[#3f5f3c] transition hover:bg-[#eef4eb]"
+                >
+                  Edit Categories
+                </button>
+              </div>
             </form>
-
             {editingCategory ? (
               <div className="flex items-center justify-between rounded-[16px] border border-[#d8e2d3] bg-[#f8fbf7] px-4 py-3">
                 <p className="text-sm text-[#586756]">
-                  Editing <span className="font-bold text-[#223020]">{editingCategory.name}</span>. New types are added to the end automatically.
+                  Editing <span className="font-bold text-[#223020]">{editingCategory.name}</span>. New categories are added to the end automatically.
                 </p>
                 <button
                   type="button"
@@ -596,60 +757,46 @@ export default function InventoryPage() {
               </div>
             ) : (
               <p className="text-xs font-medium text-[#667463]">
-                New types are appended at the end. Type order is controlled from the edit modal.
+                New categories are appended at the end. Category order is controlled from the edit modal.
               </p>
             )}
           </div>
         </details>
 
         <div className="mt-6 overflow-hidden rounded-[28px] border border-[#d9e3d5] bg-white">
-          <div className="hidden grid-cols-[1.5fr_0.9fr_0.8fr_0.8fr_0.8fr_auto] gap-4 border-b border-[#dfe8da] bg-[#edf4ea] px-6 py-4 text-xs font-bold uppercase tracking-[0.22em] text-[#6c7968] xl:grid">
-            <span>Inventory Item</span>
-            <span>Type</span>
-            <span>Cost</span>
-            <span>Stock</span>
-            <span>Days Left</span>
+          <div className="hidden grid-cols-[1.5fr_0.9fr_0.8fr_0.8fr_auto] gap-4 border-b border-[#dfe8da] bg-[#edf4ea] px-6 py-4 text-xs font-bold uppercase tracking-[0.22em] text-[#6c7968] xl:grid">
+            <span>Menu Item</span>
+            <span>Category</span>
+            <span>Price</span>
+            <span>Status</span>
             <span>Actions</span>
           </div>
 
           <div className="divide-y divide-[#ebf0e8]">
             {isLoading ? (
               <div className="px-6 py-10 text-center text-[#677564]">
-                Loading inventory...
+                Loading menu items...
               </div>
             ) : null}
             {!isLoading && filteredItems.length === 0 ? (
               <div className="px-6 py-10 text-center text-[#677564]">
-                No inventory items match this view.
+                No menu items match this view.
               </div>
             ) : null}
             {!isLoading
               ? filteredItems.map((item) => {
-                  const stockStatus = getStockStatus(item);
-
                   return (
                     <article
-                      key={item.inventoryId}
-                      className={`grid gap-4 border px-6 py-5 xl:grid-cols-[1.5fr_0.9fr_0.8fr_0.8fr_0.8fr_auto] xl:items-center ${
-                        stockStatus
-                          ? stockStatus.rowClassName
-                          : item.isActive
-                            ? 'border-transparent bg-white text-[#223020]'
-                            : 'border-transparent bg-[#fff8f1] text-[#223020]'
+                      key={item.menuId}
+                      className={`grid gap-4 px-6 py-5 xl:grid-cols-[1.5fr_0.9fr_0.8fr_0.8fr_auto] xl:items-center ${
+                        item.isActive ? 'bg-white' : 'bg-[#fff8f1]'
                       }`}
                     >
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-base font-semibold text-[#223020] sm:text-lg">
+                          <h3 className="text-lg font-bold text-[#223020]">
                             {item.name}
-                          </p>
-                          {stockStatus ? (
-                            <span
-                              className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] ${stockStatus.badgeClassName}`}
-                            >
-                              {stockStatus.label}
-                            </span>
-                          ) : null}
+                          </h3>
                           {!item.isActive ? (
                             <span className="rounded-full border border-[#b98712] bg-[#fff8d7] px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[#6b4a08]">
                               Archived
@@ -659,34 +806,32 @@ export default function InventoryPage() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] xl:hidden">
-                          Type
+                          Category
                         </p>
-                        <p className="text-sm font-semibold text-[#586756]">
+                        <span
+                          className="mt-1 inline-flex rounded-full px-3 py-1 text-sm font-bold text-white"
+                          style={{
+                            backgroundColor:
+                              item.categoryColor ?? '#667463',
+                          }}
+                        >
                           {item.categoryName ?? 'Unassigned'}
-                        </p>
+                        </span>
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] xl:hidden">
-                          Cost
+                          Price
                         </p>
-                        <p className="text-sm font-semibold text-[#586756]">
+                        <p className="text-base font-semibold text-[#223020]">
                           {currencyFormatter.format(item.cost)}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] xl:hidden">
-                          Stock
-                        </p>
-                        <p className="text-sm font-semibold text-[#223020]">
-                          {item.inventoryNum}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777] xl:hidden">
-                          Days Left
+                          Status
                         </p>
                         <p className="text-sm font-semibold text-[#586756]">
-                          {item.daysLeft ?? 'N/A'}
+                          {item.salesNum} sold
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-1 xl:justify-end">
@@ -694,7 +839,7 @@ export default function InventoryPage() {
                           type="button"
                           onClick={() => openEditModal(item)}
                           className="rounded-lg p-2 text-[#2f7a5f] transition hover:bg-[#ecf4f0]"
-                          title="Edit inventory item"
+                          title="Edit menu item"
                           aria-label={`Edit ${item.name}`}
                         >
                           <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -705,9 +850,9 @@ export default function InventoryPage() {
                         {item.isActive ? (
                           <button
                             type="button"
-                            onClick={() => deleteInventoryItem(item)}
+                            onClick={() => deleteMenuItem(item)}
                             className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
-                            title="Delete or archive inventory item"
+                            title="Delete or archive menu item"
                             aria-label={`Delete or archive ${item.name}`}
                           >
                             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -720,9 +865,9 @@ export default function InventoryPage() {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => restoreInventoryItem(item)}
+                            onClick={() => restoreMenuItem(item)}
                             className="rounded-lg p-2 text-[#223020] transition hover:bg-[#eef1ec]"
-                            title="Restore inventory item"
+                            title="Restore menu item"
                             aria-label={`Restore ${item.name}`}
                           >
                             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -740,50 +885,61 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {isMounted && isItemModalOpen
+      {isMounted && isModalOpen
         ? createPortal(
             <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[rgba(34,48,32,0.35)] p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-[#d9e3d5] bg-white p-6 shadow-[0_22px_60px_rgba(31,37,32,0.20)]">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[28px] border border-[#d9e3d5] bg-white p-6 shadow-[0_22px_60px_rgba(31,37,32,0.20)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#667463]">
-                  {editingItem ? 'Edit Inventory' : 'Add Inventory'}
+                  {editingItem ? 'Edit Menu Item' : 'Add Menu Item'}
                 </p>
                 <h3 className="mt-2 text-2xl font-bold text-[#223020]">
-                  {itemForm.name.trim() || 'Stock Item'}
+                  {form.name.trim() || 'Menu Item'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={closeItemModal}
+                onClick={closeModal}
                 className="rounded-full border border-[#d9e3d5] px-3 py-1 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3]"
               >
                 Close
               </button>
             </div>
 
-            <form onSubmit={handleItemSubmit} className="mt-6 space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <form onSubmit={handleMenuSubmit} className="mt-6 space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
                     Item Name
                   </span>
                   <input
-                    value={itemForm.name}
-                    onChange={(event) =>
-                      updateItemForm('name', event.target.value)
-                    }
+                    value={form.name}
+                    onChange={(event) => updateForm('name', event.target.value)}
                     className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
                   />
                 </label>
                 <label className="block">
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-                    Type
+                    Price
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.cost}
+                    onChange={(event) => updateForm('cost', event.target.value)}
+                    className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                    Category
                   </span>
                   <select
-                    value={itemForm.categoryId}
+                    value={form.categoryId}
                     onChange={(event) =>
-                      updateItemForm('categoryId', event.target.value)
+                      updateForm('categoryId', event.target.value)
                     }
                     className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-white px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
                   >
@@ -797,65 +953,114 @@ export default function InventoryPage() {
                 </label>
                 <label className="block">
                   <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-                    Cost
+                    Image URL
                   </span>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={itemForm.cost}
+                    value={form.imageUrl}
                     onChange={(event) =>
-                      updateItemForm('cost', event.target.value)
-                    }
-                    className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-                    Current Stock
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={itemForm.inventoryNum}
-                    onChange={(event) =>
-                      updateItemForm('inventoryNum', event.target.value)
+                      updateForm('imageUrl', event.target.value)
                     }
                     className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
                   />
                 </label>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                {editingItem ? (
+              <div className="rounded-[24px] border border-[#e4ece0] bg-[#f8fbf7] p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-lg font-bold text-[#223020]">
+                      Recipe Ingredients
+                    </h4>
+                    <p className="text-sm text-[#586756]">
+                      Each row deducts inventory when the drink is sold.
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => deleteInventoryItem(editingItem)}
-                    className="rounded-full border border-[#b85d53] bg-[#c94335] px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b8352a]"
+                    onClick={addRecipeRow}
+                    className="rounded-full bg-[#2f7a5f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#28684f]"
                   >
-                    Delete Item
-                  </button>
-                ) : (
-                  <span />
-                )}
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={closeItemModal}
-                    disabled={isSavingItem}
-                    className="rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSavingItem}
-                    className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSavingItem ? 'Saving...' : 'Save Item'}
+                    Add Ingredient
                   </button>
                 </div>
+
+                <div className="mt-4 space-y-3">
+                  {form.recipe.map((row) => (
+                    <div
+                      key={row.key}
+                      className="grid gap-3 rounded-[18px] border border-[#d8e2d3] bg-white p-3 md:grid-cols-[1fr_140px_auto]"
+                    >
+                      <select
+                        value={row.inventoryId}
+                        onChange={(event) =>
+                          updateRecipeRow(
+                            row.key,
+                            'inventoryId',
+                            event.target.value
+                          )
+                        }
+                        className="rounded-[14px] border border-[#d8e2d3] bg-white px-3 py-2 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                        aria-label="Recipe ingredient"
+                      >
+                        <option value="">Select ingredient</option>
+                        {activeInventory.map((inventoryItem) => (
+                          <option
+                            key={inventoryItem.inventoryId}
+                            value={inventoryItem.inventoryId}
+                          >
+                            {inventoryItem.name}
+                            {inventoryItem.categoryName
+                              ? ` (${inventoryItem.categoryName})`
+                              : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={row.itemQuantity}
+                        onChange={(event) =>
+                          updateRecipeRow(
+                            row.key,
+                            'itemQuantity',
+                            event.target.value
+                          )
+                        }
+                        className="rounded-[14px] border border-[#d8e2d3] bg-white px-3 py-2 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                        aria-label={`${getInventoryName(
+                          inventory,
+                          row.inventoryId
+                        )} quantity`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeRecipeRow(row.key)}
+                        className="rounded-full border border-[#d9aaa4] px-4 py-2 text-sm font-semibold text-[#91463d] transition hover:bg-[#fff2f0]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={isSaving}
+                  className="rounded-full border border-[#d4ddd0] bg-white px-5 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSaving ? 'Saving...' : 'Save Menu Item'}
+                </button>
               </div>
             </form>
           </div>
@@ -870,10 +1075,10 @@ export default function InventoryPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.22em] text-[#667463]">
-                      Inventory Types
+                      Categories
                     </p>
                     <h3 className="mt-2 text-2xl font-bold text-[#223020]">
-                      Reorder types
+                      Reorder categories
                     </h3>
                     <p className="mt-2 text-sm text-[#586756]">
                       Drag rows to set display order. We save the database order from top to bottom.
@@ -889,8 +1094,9 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="mt-6 overflow-hidden rounded-[22px] border border-[#d9e3d5]">
-                  <div className="grid grid-cols-[1.8fr_0.8fr_auto] gap-3 border-b border-[#dfe8da] bg-[#edf4ea] px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#6c7968]">
+                  <div className="grid grid-cols-[1.6fr_0.7fr_0.8fr_auto] gap-3 border-b border-[#dfe8da] bg-[#edf4ea] px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#6c7968]">
                     <span>Name</span>
+                    <span>Color</span>
                     <span>Display Order</span>
                     <span>Actions</span>
                   </div>
@@ -920,7 +1126,7 @@ export default function InventoryPage() {
                           moveDraftCategory(category.categoryId);
                           setDraggedCategoryId(null);
                         }}
-                        className={`grid cursor-grab grid-cols-[1.8fr_0.8fr_auto] items-center gap-3 px-4 py-4 transition-all duration-200 active:cursor-grabbing ${
+                        className={`grid cursor-grab grid-cols-[1.6fr_0.7fr_0.8fr_auto] items-center gap-3 px-4 py-4 transition-all duration-200 active:cursor-grabbing ${
                           isDragging
                             ? 'relative z-10 scale-[1.02] border-y border-[#9db59a] bg-[#eef8ef] opacity-80 shadow-[0_18px_34px_rgba(31,37,32,0.18)]'
                             : 'bg-white hover:bg-[#f8fbf7]'
@@ -935,8 +1141,17 @@ export default function InventoryPage() {
                             ) : null}
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-5 w-5 rounded-full border border-black/10"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="text-sm font-semibold text-[#586756]">
+                            {category.color.toUpperCase()}
+                          </span>
+                        </div>
                         <p className="text-sm font-semibold text-[#586756]">{index + 1}</p>
-                        <div className="flex justify-end gap-1">
+                        <div className="flex gap-1 justify-end">
                           <button
                             type="button"
                             onClick={() => {
@@ -944,7 +1159,7 @@ export default function InventoryPage() {
                               setIsCategoryModalOpen(false);
                             }}
                             className="rounded-lg p-2 text-[#2f7a5f] transition hover:bg-[#ecf4f0]"
-                            title="Edit type"
+                            title="Edit category"
                             aria-label={`Edit ${category.name}`}
                           >
                             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
@@ -956,7 +1171,7 @@ export default function InventoryPage() {
                             type="button"
                             onClick={() => deleteCategory(category)}
                             className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
-                            title="Remove type"
+                            title="Remove category"
                             aria-label={`Remove ${category.name}`}
                           >
                             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">

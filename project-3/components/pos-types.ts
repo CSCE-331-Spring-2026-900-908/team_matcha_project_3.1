@@ -8,6 +8,9 @@ export type MenuItem = {
   name: string;
   cost: number;
   image_url?: string;
+  category_id?: number | null;
+  category_label?: string | null;
+  category_color?: string | null;
   stockStatus?: 'low' | 'out';
 };
 
@@ -29,7 +32,14 @@ export const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 });
 
-export const categorizeItem = (name: string) => {
+export const categorizeItem = (
+  item: string | Pick<MenuItem, 'name' | 'category_label'>
+) => {
+  if (typeof item !== 'string' && item.category_label) {
+    return item.category_label;
+  }
+
+  const name = typeof item === 'string' ? item : item.name;
   return categorizeMenuItem(name)?.label ?? 'Other';
 };
 

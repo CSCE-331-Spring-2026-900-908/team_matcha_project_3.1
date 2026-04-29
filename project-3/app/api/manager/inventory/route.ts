@@ -8,9 +8,11 @@ import {
 } from '@/lib/inventory';
 
 export async function GET(req: NextRequest) {
-  return withAuth(req, ['manager'], async () => {
+  return withAuth(req, ['manager'], async (request) => {
     try {
-      const inventoryItems = await getInventoryItems();
+      const { searchParams } = new URL(request.url);
+      const includeArchived = searchParams.get('includeArchived') === 'true';
+      const inventoryItems = await getInventoryItems(includeArchived);
       return NextResponse.json(inventoryItems);
     } catch (error) {
       console.error('Database connection error:', error);
@@ -29,6 +31,10 @@ export async function POST(req: NextRequest) {
       const name = String(body.name ?? '').trim();
       const cost = Number(body.cost);
       const inventoryNum = Number(body.inventoryNum);
+      const categoryId =
+        body.categoryId === null || body.categoryId === undefined
+          ? null
+          : Number(body.categoryId);
 
       if (!name) {
         return NextResponse.json(
@@ -37,9 +43,13 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (!Number.isFinite(cost) || !Number.isFinite(inventoryNum)) {
+      if (
+        !Number.isFinite(cost) ||
+        !Number.isFinite(inventoryNum) ||
+        (categoryId !== null && !Number.isFinite(categoryId))
+      ) {
         return NextResponse.json(
-          { error: 'Cost and stock are required.' },
+          { error: 'Cost, stock, and category must be valid.' },
           { status: 400 }
         );
       }
@@ -55,7 +65,8 @@ export async function POST(req: NextRequest) {
         name,
         cost,
         Math.floor(inventoryNum),
-        0
+        0,
+        categoryId
       );
 
       return NextResponse.json(createdItem, { status: 201 });
@@ -77,15 +88,20 @@ export async function PATCH(req: NextRequest) {
       const name = String(body.name ?? '').trim();
       const cost = Number(body.cost);
       const inventoryNum = Number(body.inventoryNum);
+      const categoryId =
+        body.categoryId === null || body.categoryId === undefined
+          ? null
+          : Number(body.categoryId);
 
       if (
         !Number.isFinite(inventoryId) ||
         !name ||
         !Number.isFinite(cost) ||
-        !Number.isFinite(inventoryNum)
+        !Number.isFinite(inventoryNum) ||
+        (categoryId !== null && !Number.isFinite(categoryId))
       ) {
         return NextResponse.json(
-          { error: 'Inventory ID, name, cost, and stock are required.' },
+          { error: 'Inventory ID, name, cost, stock, and category are required.' },
           { status: 400 }
         );
       }
@@ -101,7 +117,8 @@ export async function PATCH(req: NextRequest) {
         inventoryId,
         name,
         cost,
-        Math.floor(inventoryNum)
+        Math.floor(inventoryNum),
+        categoryId
       );
 
       if (!updatedItem) {
@@ -137,24 +154,18 @@ export async function DELETE(req: NextRequest) {
 
       const result = await deleteInventoryItem(inventoryId);
 
-      if (result.inUse) {
-        return NextResponse.json(
-          {
-            error:
-              'This inventory item is used by one or more menu items and cannot be deleted.',
-          },
-          { status: 409 }
-        );
-      }
-
-      if (!result.deleted) {
+      if (!result.deleted && !result.archived) {
         return NextResponse.json(
           { error: 'Inventory item not found.' },
           { status: 404 }
         );
       }
 
-      return NextResponse.json({ deleted: true, inventoryId });
+      return NextResponse.json({
+        deleted: result.deleted,
+        archived: result.archived,
+        inventoryId,
+      });
     } catch (error) {
       console.error('Inventory delete error:', error);
       return NextResponse.json(
