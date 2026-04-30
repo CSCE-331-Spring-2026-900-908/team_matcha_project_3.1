@@ -664,7 +664,7 @@ if (kioskUser) {
         <header className="border-b border-[#eadfce] bg-white/90 p-6 shadow-sm backdrop-blur">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Link
+              {/* <Link
                 href="/"
                 className="flex h-12 items-center justify-center rounded-full bg-[#f8f1e7] px-5 text-base font-bold text-[#4a554a] transition-all hover:bg-[#e6d8c4] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f]"
                 aria-label="Back to Portal"
@@ -673,7 +673,7 @@ if (kioskUser) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
                 Portal
-              </Link>
+              </Link> */}
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6d8a6f]">
                   Self Service
@@ -746,8 +746,7 @@ if (kioskUser) {
           </nav>
         </header>
 
-        <div id="main-content" className="flex-1 overflow-y-auto px-6 pb-32 pt-6 lg:pb-6">
-          <section className="matcha-grid mb-6 grid gap-4 rounded-[32px] border border-[#e8e2d7] bg-[linear-gradient(135deg,#fffdf9_0%,#eef1ec_100%)] p-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]" aria-labelledby="featured-drink-title">
+<div id="main-content" className="flex-1 overflow-y-auto bg-[linear-gradient(135deg,#f5ede0_0%,#e8d5b8_50%,#dfc9a5_100%)] px-6 pb-32 pt-6 lg:pb-6">          <section className="matcha-grid mb-6 grid gap-4 rounded-[32px] border border-[#e8e2d7] bg-[linear-gradient(135deg,#fffdf9_0%,#eef1ec_100%)] p-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]" aria-labelledby="featured-drink-title">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
               <section className="rounded-[28px] bg-[#1f2520] px-6 py-6 text-white shadow-[0_18px_44px_rgba(31,37,32,0.18)]" aria-describedby="featured-drink-copy">
                 <button
@@ -837,7 +836,7 @@ if (kioskUser) {
                     )}
                     <div className="contrast-image-overlay absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(31,37,32,0.82)_100%)] p-5 text-white">
                       <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/72">
-                        Highlighted Drink
+                        Weather Pick
                       </p>
                       <p className="mt-2 text-2xl font-bold">
                         {featuredItem ? featuredItem.name : 'House Favorite'}
@@ -859,7 +858,7 @@ if (kioskUser) {
                       Summer Spotlight
                     </p>
                     <h3 id="seasonal-spotlight-title" className="mt-2 text-2xl font-bold text-[#3c2a03]">
-                      Rotating Seasonal Drinks
+                      Seasonal Drinks
                     </h3>
                   </div>
                   {seasonalItems.length > 1 ? (
