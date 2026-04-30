@@ -360,7 +360,7 @@ export default function EmployeesPage() {
       {isMounted && isModalOpen
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto bg-white rounded-[32px] p-8 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto bg-white rounded-[32px] p-8 text-black shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-[#2f241d]">
                 {editingEmployee ? 'Edit Employee' : 'Create New Employee'}
@@ -379,23 +379,23 @@ export default function EmployeesPage() {
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-[#8a6240] mb-1">Full Name</label>
+                  <label className="block text-sm font-bold text-black mb-1">Full Name</label>
                   <input
                     type="text"
                     value={form.name}
                     onChange={(e) => updateForm('name', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] bg-white text-black placeholder:text-[#555] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
                     placeholder="e.g. John Doe"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-[#8a6240] mb-1">Email Address</label>
+                  <label className="block text-sm font-bold text-black mb-1">Email Address</label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => updateForm('email', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] bg-white text-black placeholder:text-[#555] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
                     placeholder="staff@matcha.com"
                     required
                   />
@@ -404,12 +404,12 @@ export default function EmployeesPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-[#8a6240] mb-1">Pay</label>
+                  <label className="block text-sm font-bold text-black mb-1">Pay</label>
                   <input
                     type="number"
                     value={form.pay}
                     onChange={(e) => updateForm('pay', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] bg-white text-black placeholder:text-[#555] outline-none focus:ring-2 focus:ring-[#2f7a5f]"
                     min="0"
                     placeholder="0.00"
                     step="0.01"
@@ -417,7 +417,7 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-[#8a6240] mb-1">
+                  <label className="block text-sm font-bold text-black mb-1">
                     Access
                   </label>
                   <select
@@ -428,14 +428,14 @@ export default function EmployeesPage() {
                         e.target.value as EmployeeForm['role']
                       )
                     }
-                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f] bg-white"
+                    className="w-full px-4 py-3 rounded-xl border border-[#eadfce] outline-none focus:ring-2 focus:ring-[#2f7a5f] bg-white text-black"
                   >
                     <option value="employee">Employee View</option>
                     <option value="manager">Manager View</option>
                   </select>
                 </div>
                 {editingEmployee ? (
-                  <div className="rounded-xl bg-[#f8f1e7] px-4 py-3 text-sm text-[#6f5848]">
+                  <div className="rounded-xl bg-[#f8f1e7] px-4 py-3 text-sm text-black">
                     Order count: <span className="font-bold">{editingEmployee.ordernum}</span>
                   </div>
                 ) : null}
@@ -456,7 +456,7 @@ export default function EmployeesPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-8 py-3 bg-gray-100 text-[#6f5848] rounded-xl font-bold hover:bg-gray-200 transition-all"
+                  className="px-8 py-3 bg-gray-100 text-black rounded-xl font-bold hover:bg-gray-200 transition-all"
                 >
                   Cancel
                 </button>

@@ -271,7 +271,7 @@ export async function getManagerMenuItems(includeArchived = false) {
         menu.menuid,
         menu.name,
         menu.cost,
-        menu.salesnum,
+        COALESCE(sold_items.salesnum, 0) AS salesnum,
         menu.image_url,
         menu.category_id,
         category.name AS category_name,
@@ -280,6 +280,11 @@ export async function getManagerMenuItems(includeArchived = false) {
         menu.archived_at
        FROM menu
        LEFT JOIN menu_categories AS category ON category.category_id = menu.category_id
+       LEFT JOIN (
+         SELECT menuid, COALESCE(SUM(quantity), 0)::int AS salesnum
+         FROM order_items
+         GROUP BY menuid
+       ) AS sold_items ON sold_items.menuid = menu.menuid
        WHERE $1::boolean OR COALESCE(menu.is_active, true) = true
        ORDER BY COALESCE(menu.is_active, true) DESC, menu.name ASC;`,
       [includeArchived]

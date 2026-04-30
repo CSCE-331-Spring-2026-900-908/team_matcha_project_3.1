@@ -7,6 +7,7 @@ import GoogleTranslateWidget from "@/components/GoogleTranslateWidget";
 const subscribeToClientSnapshot = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
+const isMenuDisplayPath = (pathname: string) => pathname === '/menu';
 
 export default function LanguageLayout({
   children,
@@ -23,7 +24,7 @@ export default function LanguageLayout({
   const [isReaderActive, setIsReaderActive] = useState(false);
   const [isAccessibilityPanelOpen, setIsAccessibilityPanelOpen] = useState(false);
   const pathname = usePathname();
-  const hideSkipLink = pathname === '/menu';
+  const hideSkipLink = isMenuDisplayPath(pathname);
   const readerQueueRef = useRef<string[]>([]);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 

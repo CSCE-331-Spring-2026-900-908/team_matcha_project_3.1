@@ -114,6 +114,12 @@ export async function createOrder(
           toppingString,
         ]
       );
+      await connection.query(
+        `UPDATE menu
+         SET salesnum = COALESCE(salesnum, 0) + $2
+         WHERE menuid = $1`,
+        [item.menuid, itemQuantity]
+      );
 
       await decrementMenuItemInventory(
         connection,
