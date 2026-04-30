@@ -9,7 +9,11 @@ import {
   normalizeToppingName,
   TOPPING_COSTS,
 } from '@/lib/toppings';
-import { loadWeatherSnapshot } from '@/lib/weather';
+import {
+  getWeatherRecommendationMeta,
+  loadWeatherSnapshot,
+  pickWeatherRecommendedItem,
+} from '@/lib/weather';
 
 export type AssistantCartItem = MenuItem & {
   quantity: number;
@@ -173,68 +177,6 @@ export async function createAssistantCartItems(input: {
   };
 }
 
-function pickWeatherRecommendedItem(
-  items: MenuSearchResult[],
-  weather: {
-    current: {
-      temperatureF: number | null;
-      condition: string;
-    };
-  } | null
-) {
-  if (items.length === 0) return null;
-
-  const currentTemp = weather?.current.temperatureF;
-  const condition = weather?.current.condition.toLowerCase() ?? '';
-
-  const findByKeywords = (keywords: string[]) =>
-    items.find((item) => keywords.some((keyword) => item.name.toLowerCase().includes(keyword)));
-
-  if (condition.includes('rain') || condition.includes('drizzle') || condition.includes('thunderstorm')) {
-    return findByKeywords(['latte', 'milk', 'matcha']) ?? items[0];
-  }
-
-  if (condition.includes('snow') || condition.includes('fog')) {
-    return findByKeywords(['latte', 'milk', 'tea']) ?? items[0];
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp >= 82) {
-    return findByKeywords(['fruit', 'mango', 'strawberry', 'tea']) ?? items[0];
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp <= 55) {
-    return findByKeywords(['matcha', 'latte', 'milk']) ?? items[0];
-  }
-
-  return findByKeywords(['matcha', 'tea', 'milk']) ?? items[0];
-}
-
-function getWeatherRecommendationReason(
-  weather: {
-    current: {
-      temperatureF: number | null;
-      condition: string;
-    };
-  } | null
-) {
-  const currentTemp = weather?.current.temperatureF;
-  const condition = weather?.current.condition.toLowerCase() ?? '';
-
-  if (condition.includes('rain') || condition.includes('thunderstorm')) {
-    return 'Rainy weather calls for something smoother and more comforting.';
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp >= 82) {
-    return 'Warm weather makes a lighter, refreshing drink a strong pick.';
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp <= 55) {
-    return 'Cool weather makes a richer, cozier drink feel right.';
-  }
-
-  return 'Today feels like a good match for a balanced house favorite.';
-}
-
 export async function createWeatherRecommendedCartItem() {
   const menu = (await getMenuItems()).map(withMenuDetails);
   let weather = null;
@@ -275,7 +217,7 @@ export async function createWeatherRecommendedCartItem() {
     cupSize: DEFAULT_CUP_SIZE,
   };
 
-  const reason = getWeatherRecommendationReason(weather);
+  const reason = getWeatherRecommendationMeta(weather).reason;
 
   return {
     cartItems: [cartItem],

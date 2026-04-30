@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import LanguageLayout from "@/components/LanguageLayout";
+import type { Metadata } from 'next';
+import './globals.css';
+import LanguageLayout from '@/components/LanguageLayout';
 
 export const metadata: Metadata = {
-  title: "Team Matcha Portal",
-  description: "Menu portal for Team Matcha",
+  title: 'Team Matcha Portal',
+  description: 'Menu portal for Team Matcha',
 };
 
 export default function RootLayout({
