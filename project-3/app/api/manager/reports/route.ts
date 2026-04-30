@@ -20,6 +20,26 @@ type ZRunLogRow = {
   already_ran: number;
 };
 
+async function ensureZReportLogTable(client: PoolClient) {
+  await client.query(
+    'CREATE TABLE IF NOT EXISTS z_report_log (run_date DATE PRIMARY KEY);'
+  );
+}
+
+async function hasZReportRunForDate(
+  client: PoolClient,
+  targetDate: string
+) {
+  await ensureZReportLogTable(client);
+
+  const alreadyRanResult = await client.query<ZRunLogRow>(
+    'SELECT COUNT(*)::int AS already_ran FROM z_report_log WHERE run_date = $1::date;',
+    [targetDate]
+  );
+
+  return (alreadyRanResult.rows[0]?.already_ran ?? 0) > 0;
+}
+
 async function hasStatusColumn(
   client: PoolClient
 ) {
@@ -93,6 +113,19 @@ async function getReportSnapshot(
   };
 }
 
+function getZeroReportSnapshot(targetDate: string) {
+  return {
+    date: targetDate,
+    summary: {
+      salesTotal: 0,
+      orderCount: 0,
+      returnTotal: 0,
+      returnCount: 0,
+    },
+    hourly: [],
+  };
+}
+
 export async function GET(req: NextRequest) {
   return withAuth(req, ['manager'], async (request) => {
     const { searchParams } = new URL(request.url);
@@ -109,6 +142,17 @@ export async function GET(req: NextRequest) {
     const client = await pool.connect();
 
     try {
+      const alreadyClosed = await hasZReportRunForDate(client, targetDate);
+
+      if (type === 'x' && alreadyClosed) {
+        return NextResponse.json({
+          type,
+          report: getZeroReportSnapshot(targetDate),
+          hasSideEffects: false,
+          message: 'X-report generated successfully.',
+        });
+      }
+
       const supportsStatus = await hasStatusColumn(client);
       const snapshot = await getReportSnapshot(client, targetDate, supportsStatus);
 
@@ -151,18 +195,9 @@ export async function POST(req: NextRequest) {
     try {
       await client.query('BEGIN');
       const supportsStatus = await hasStatusColumn(client);
+      const alreadyRan = await hasZReportRunForDate(client, targetDate);
 
-      await client.query(
-        'CREATE TABLE IF NOT EXISTS z_report_log (run_date DATE PRIMARY KEY);'
-      );
-
-      const alreadyRanResult = await client.query<ZRunLogRow>(
-        'SELECT COUNT(*)::int AS already_ran FROM z_report_log WHERE run_date = $1::date;',
-        [targetDate]
-      );
-      const alreadyRan = alreadyRanResult.rows[0]?.already_ran ?? 0;
-
-      if (alreadyRan > 0) {
+      if (alreadyRan) {
         await client.query('ROLLBACK');
         return NextResponse.json(
           { error: 'Z-report has already been run for this date.' },
