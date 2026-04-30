@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import GoogleTranslateWidget from "@/components/GoogleTranslateWidget";
 
 const subscribeToClientSnapshot = () => () => {};
@@ -21,6 +22,8 @@ export default function LanguageLayout({
   const [contrastMode, setContrastMode] = useState(false);
   const [isReaderActive, setIsReaderActive] = useState(false);
   const [isAccessibilityPanelOpen, setIsAccessibilityPanelOpen] = useState(false);
+  const pathname = usePathname();
+  const hideSkipLink = pathname === '/menu';
   const readerQueueRef = useRef<string[]>([]);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -141,12 +144,14 @@ export default function LanguageLayout({
 
   return (
     <div>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:rounded-full focus:bg-[#2f7a5f] focus:px-6 focus:py-3 focus:text-white focus:font-bold focus:shadow-2xl focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
-      >
-        Skip to main content
-      </a>
+      {!hideSkipLink ? (
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:rounded-full focus:bg-[#2f7a5f] focus:px-6 focus:py-3 focus:text-white focus:font-bold focus:shadow-2xl focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
+        >
+          Skip to main content
+        </a>
+      ) : null}
       {mounted ? (
         <div className="pointer-events-none fixed right-5 top-5 z-[100] flex items-start gap-3">
           <div
