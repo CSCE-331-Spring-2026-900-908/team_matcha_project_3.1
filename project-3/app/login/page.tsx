@@ -63,11 +63,11 @@ export default function LoginPage() {
           const returnTo = getSafeReturnTo();
 
           if (returnTo) {
-            router.push(returnTo);
+            router.replace(returnTo);
           } else if (data.user.role === 'manager') {
-            router.push('/manager');
+            router.replace('/manager');
           } else {
-            router.push('/employee');
+            router.replace('/employee');
           }
         } else {
           const errData = await res.json();
@@ -147,12 +147,12 @@ export default function LoginPage() {
         )}
 
         <div className="pt-4 border-t border-gray-100 flex justify-center">
-          <button 
+          {/* <button 
             onClick={() => router.push('/')}
             className="w-full py-2.5 rounded-xl border-2 border-[#2f7a5f] text-[#2f7a5f] font-bold hover:bg-[#2f7a5f] hover:text-white transition-all duration-200"
           >
             Back to Home
-          </button>
+          </button> */}
         </div>
 
         <div className="text-center text-xs text-gray-400">

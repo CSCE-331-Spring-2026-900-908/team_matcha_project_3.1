@@ -223,7 +223,7 @@ function EmployeePOSContent() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_name');
-    router.push('/login');
+    router.replace('/login');
   };
 
   if (isLoading)
@@ -271,7 +271,7 @@ function EmployeePOSContent() {
             <div className="flex items-center gap-3">
             {userRole === 'manager' && (
                 <button
-                  onClick={() => router.push('/manager')}
+                  onClick={() => router.replace('/manager')}
                   className="rounded-xl border border-[#2f7a5f] text-[#2f7a5f] px-4 py-2 text-sm font-semibold hover:bg-[#2f7a5f] hover:text-white transition-all shadow-sm"
                 >
                   Manager View

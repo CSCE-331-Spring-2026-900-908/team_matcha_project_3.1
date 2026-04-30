@@ -19,10 +19,10 @@ export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
 
     if (!token) {
       const returnTo = `${window.location.pathname}${window.location.search}`;
-      router.push(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+      router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`);
     } else if (!allowedRoles.includes(role)) {
-      if (role === 'manager') router.push('/manager');
-      else router.push('/employee');
+      if (role === 'manager') router.replace('/manager');
+      else router.replace('/employee');
     } else {
       authorizationTimer = window.setTimeout(() => setIsAuthorized(true), 0);
     }
