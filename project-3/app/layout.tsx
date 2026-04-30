@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import LanguageLayout from "@/components/LanguageLayout";
+import type { Metadata } from 'next';
+import './globals.css';
+import LanguageLayout from '@/components/LanguageLayout';
+import AuthProvider from '@/components/AuthProvider';
 
 export const metadata: Metadata = {
-  title: "Team Matcha Portal",
-  description: "Menu portal for Team Matcha",
+  title: 'Team Matcha Portal',
+  description: 'Menu portal for Team Matcha',
 };
 
 export default function RootLayout({
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <LanguageLayout>{children}</LanguageLayout>
+        <AuthProvider>
+          <LanguageLayout>{children}</LanguageLayout>
+        </AuthProvider>
       </body>
     </html>
   );
