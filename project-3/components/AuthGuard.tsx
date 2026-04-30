@@ -8,6 +8,9 @@ interface AuthGuardProps {
   allowedRoles: ('employee' | 'manager')[];
 }
 
+const unauthorizedCustomerMessage =
+  'This Google account is not authorized for this POS.';
+
 export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -15,12 +18,27 @@ export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   useEffect(() => {
     let authorizationTimer: number | undefined;
     const token = localStorage.getItem('auth_token');
-    const role = localStorage.getItem('user_role') as 'employee' | 'manager';
+    const role = localStorage.getItem('user_role') as
+      | 'employee'
+      | 'manager'
+      | 'customer'
+      | null;
 
     if (!token) {
       const returnTo = `${window.location.pathname}${window.location.search}`;
       router.replace(`/login?returnTo=${encodeURIComponent(returnTo)}`);
-    } else if (!allowedRoles.includes(role)) {
+    } else if (role === 'customer') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_name');
+
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      const params = new URLSearchParams({
+        returnTo,
+        error: unauthorizedCustomerMessage,
+      });
+      router.replace(`/login?${params.toString()}`);
+    } else if (!role || !allowedRoles.includes(role)) {
       if (role === 'manager') router.replace('/manager');
       else router.replace('/employee');
     } else {

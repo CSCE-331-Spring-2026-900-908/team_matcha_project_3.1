@@ -59,6 +59,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'User not found' }, { status: 500 });
       }
 
+      if (user.role === 'customer' && source !== 'kiosk') {
+        return NextResponse.json(
+          { error: 'This Google account is not authorized for this POS.' },
+          { status: 403 }
+        );
+      }
+
       if (
         user.google_id !== googleId ||
         user.email !== email

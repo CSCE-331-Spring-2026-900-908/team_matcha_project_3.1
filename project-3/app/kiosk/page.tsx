@@ -328,6 +328,17 @@ useEffect(() => {
   loadPoints();
 }, [kioskUser]);
 
+  function handleKioskSignOut() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('user_name');
+    setKioskUser(null);
+    setPoints(0);
+    setDiscountAmount(0);
+    setRedeemSuccess(false);
+    setRedeemConfirmOpen(false);
+  }
+
   const categories = useMemo(() => {
     return getOrderedCategories(items);
   }, [items]);
@@ -710,28 +721,54 @@ if (kioskUser) {
             </div>
             <div className="flex shrink-0 items-center xl:justify-end">
               {kioskUser ? (
-                <div className="flex items-center gap-3 rounded-[20px] border border-[#dce5d8] bg-[#eef1ec] px-5 py-2.5 shadow-sm">
-                  <span className="text-xl">🏆</span>
-                  <div>
+                <div className="flex items-stretch gap-3 rounded-[20px] border border-[#dce5d8] bg-[#eef1ec] px-5 py-2.5 shadow-sm">
+                  <span className="self-center text-xl">🏆</span>
+                  <div className="flex flex-col justify-center">
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6d8a6f]">
                       {kioskUser.name.split(' ')[0]}
                     </p>
                     <p className="text-base font-extrabold text-[#2f7a5f]">
                       {points} pts
-                      {points >= 50 && (
-                        <button
-                          onClick={handleRedeem}
-                          disabled={isRedeeming}
-                          className="ml-3 rounded-full bg-[#2f7a5f] px-3 py-0.5 text-xs font-bold text-white transition hover:bg-[#25614b] disabled:opacity-50"
-                        >
-                          {isRedeeming ? '...' : 'Redeem'}
-                        </button>
-                      )}
                     </p>
                     {redeemSuccess && (
                       <p className="text-xs font-bold text-[#2f7a5f]">✓ Free drink redeemed!</p>
                     )}
                   </div>
+                  {points >= 50 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleRedeem}
+                        disabled={isRedeeming}
+                        className="self-center rounded-full bg-[#2f7a5f] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-[#25614b] focus:outline-none focus:ring-2 focus:ring-[#2f7a5f] focus:ring-offset-2 disabled:opacity-50"
+                      >
+                        {isRedeeming ? '...' : 'Redeem'}
+                      </button>
+                      <div aria-hidden="true" className="my-1 w-px bg-[#c8d1c4]" />
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleKioskSignOut}
+                    aria-label="Sign out"
+                    title="Sign out"
+                    className="flex h-10 w-10 items-center justify-center self-center rounded-full border border-[#f0b3aa] bg-[#fff1ef] text-[#b42318] transition hover:bg-[#ffe0dc] focus:outline-none focus:ring-2 focus:ring-[#d92d20] focus:ring-offset-2"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <path d="M16 17l5-5-5-5" />
+                      <path d="M21 12H9" />
+                    </svg>
+                  </button>
                 </div>
               ) : (
                 <div className="flex min-h-[44px] items-center">

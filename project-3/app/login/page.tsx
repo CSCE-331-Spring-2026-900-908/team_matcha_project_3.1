@@ -35,6 +35,11 @@ function getSafeReturnTo() {
   return returnTo;
 }
 
+function getLoginError() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('error');
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +48,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
+    setError(getLoginError());
     
     const handleCredentialResponse = async (response: GoogleCredentialResponse) => {
       setLoading(true);
