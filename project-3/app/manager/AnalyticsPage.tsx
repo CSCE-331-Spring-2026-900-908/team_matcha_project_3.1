@@ -240,7 +240,7 @@ export default function AnalyticsPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#647462]">
                   Orders (range)
                 </p>
-                <p className="mt-3 text-[clamp(1.6rem,4vw,2.25rem)] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]">
+                <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.45rem,3.4vw,2.05rem)] font-bold leading-tight tracking-tight">
                   {compactNumberFormatter.format(analytics.summary.totalOrders)}
                 </p>
               </article>
@@ -248,10 +248,10 @@ export default function AnalyticsPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#647462]">
                   Revenue (range)
                 </p>
-                <p className="mt-3 text-[clamp(1.6rem,4vw,2.25rem)] font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:hidden">
+                <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.45rem,3.4vw,2.05rem)] font-bold leading-tight tracking-tight sm:hidden">
                   {compactCurrencyFormatter.format(analytics.summary.totalRevenue)}
                 </p>
-                <p className="mt-3 hidden text-[clamp(1.6rem,4vw,2.25rem)] font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:block">
+                <p className="mt-3 hidden overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.45rem,3.4vw,2.05rem)] font-bold leading-tight tracking-tight sm:block">
                   {currencyFormatter.format(analytics.summary.totalRevenue)}
                 </p>
               </article>
@@ -259,10 +259,10 @@ export default function AnalyticsPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#647462]">
                   Avg Order Value
                 </p>
-                <p className="mt-3 text-[clamp(1.6rem,4vw,2.25rem)] font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:hidden">
+                <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.45rem,3.4vw,2.05rem)] font-bold leading-tight tracking-tight sm:hidden">
                   {compactCurrencyFormatter.format(analytics.summary.averageOrderValue)}
                 </p>
-                <p className="mt-3 hidden text-[clamp(1.6rem,4vw,2.25rem)] font-bold leading-tight tracking-tight [overflow-wrap:anywhere] sm:block">
+                <p className="mt-3 hidden overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.45rem,3.4vw,2.05rem)] font-bold leading-tight tracking-tight sm:block">
                   {currencyFormatter.format(analytics.summary.averageOrderValue)}
                 </p>
               </article>
@@ -270,22 +270,22 @@ export default function AnalyticsPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#647462]">
                   Pending Orders
                 </p>
-                <p className="mt-3 text-[clamp(1.6rem,4vw,2.25rem)] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]">
+                <p className="mt-3 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.45rem,3.4vw,2.05rem)] font-bold leading-tight tracking-tight">
                   {analytics.summary.pendingOrders}
                 </p>
               </article>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <article className="rounded-[22px] border border-[#d2dccc] bg-white p-6">
+            <div className="grid items-stretch gap-4 lg:grid-cols-2">
+              <article className="h-full min-h-[360px] rounded-[22px] border border-[#d2dccc] bg-white p-6">
                 <h3 className="text-xl font-semibold">Revenue Trend</h3>
                 <p className="mt-1 text-sm text-[#607061]">
                   Daily revenue movement for the selected period.
                 </p>
                 {analytics.dailyTrend.length > 0 ? (
-                  <div className="mt-6 overflow-x-auto">
+                  <div className="mt-6 flex min-h-60 items-center overflow-x-auto">
                     <div
-                      className="grid min-w-[420px] items-end gap-2"
+                      className="grid h-48 min-w-[420px] items-end gap-2"
                       style={{
                         gridTemplateColumns: `repeat(${analytics.dailyTrend.length}, minmax(24px, 1fr))`,
                       }}
@@ -293,8 +293,8 @@ export default function AnalyticsPage() {
                     {analytics.dailyTrend.map((day) => {
                       const normalizedHeight =
                         ((day.revenue - trendStats.minRevenue) / trendStats.revenueRange) *
-                          90 +
-                        12;
+                          140 +
+                        18;
 
                       return (
                         <div key={day.day} className="flex flex-col items-center">
@@ -316,7 +316,7 @@ export default function AnalyticsPage() {
                 )}
               </article>
 
-              <article className="rounded-[22px] border border-[#d2dccc] bg-white p-6">
+              <article className="h-full min-h-[360px] rounded-[22px] border border-[#d2dccc] bg-white p-6">
                 <h3 className="text-xl font-semibold">Top Sellers</h3>
                 <p className="mt-1 text-sm text-[#607061]">
                   Best-selling menu items by quantity sold in this range.
@@ -352,13 +352,13 @@ export default function AnalyticsPage() {
               </article>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <article className="rounded-[22px] border border-[#d2dccc] bg-white p-6">
+            <div className="grid items-stretch gap-4 lg:grid-cols-2">
+              <article className="h-full min-h-[360px] rounded-[22px] border border-[#d2dccc] bg-white p-6">
                 <h3 className="text-xl font-semibold">Orders by Hour</h3>
                 <p className="mt-1 text-sm text-[#607061]">
                   Number of orders captured by hour in this date range.
                 </p>
-                <ul className="mt-5 max-h-56 space-y-2 overflow-auto pr-1">
+                <ul className="mt-5 max-h-80 space-y-2 overflow-auto pr-1">
                   {analytics.hourlyTrend.map((entry) => (
                     <li
                       key={entry.hourOfDay}
@@ -375,7 +375,7 @@ export default function AnalyticsPage() {
                 </ul>
               </article>
 
-              <article className="rounded-[22px] border border-[#d2dccc] bg-white p-6">
+              <article className="h-full min-h-[360px] rounded-[22px] border border-[#d2dccc] bg-white p-6">
                 <h3 className="text-xl font-semibold">Menu Price Distribution</h3>
                 <p className="mt-1 text-sm text-[#607061]">
                   Catalog mix by price bracket.
