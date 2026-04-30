@@ -36,7 +36,7 @@ CREATE TABLE menu (
     name VARCHAR(100), 
     cost DECIMAL(10,2), 
     salesNum INT,
-    image_url VARCHAR(255)
+    image_url TEXT
 );
 
 CREATE TABLE employees (

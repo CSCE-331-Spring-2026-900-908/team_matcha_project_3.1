@@ -9,8 +9,12 @@ export async function authFetch(url: string, options: RequestInit = {}) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Ensure Content-Type is set for JSON bodies
-  if (options.body && !headers.has('Content-Type')) {
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+  // Ensure Content-Type is set for JSON bodies. FormData needs the browser to
+  // set its own multipart boundary.
+  if (options.body && !headers.has('Content-Type') && !isFormData) {
     headers.set('Content-Type', 'application/json');
   }
 

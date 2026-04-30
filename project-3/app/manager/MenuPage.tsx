@@ -1,6 +1,14 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ClipboardEvent,
+  type DragEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { authFetch } from '@/lib/fetch-utils';
 
@@ -91,6 +99,9 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 });
 
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const maxImageUploadSize = 5 * 1024 * 1024;
+
 function sortCategories(categories: MenuCategory[]) {
   return [...categories].sort(
     (first, second) =>
@@ -110,6 +121,18 @@ function buildRecipeRow(ingredient?: RecipeIngredient): RecipeFormRow {
 function getInventoryName(inventory: InventoryItem[], inventoryId: string) {
   const id = Number(inventoryId);
   return inventory.find((item) => item.inventoryId === id)?.name ?? 'Ingredient';
+}
+
+function isValidImageUrl(value: string) {
+  if (!value) return true;
+  if (value.startsWith('/images/')) return true;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
 }
 
 export default function MenuPage() {
@@ -132,7 +155,12 @@ export default function MenuPage() {
   const [draftCategories, setDraftCategories] = useState<MenuCategory[]>([]);
   const [draggedCategoryId, setDraggedCategoryId] = useState<number | null>(null);
   const [isColorPanelOpen, setIsColorPanelOpen] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
+  const [isImageDragActive, setIsImageDragActive] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const categoryNameInputRef = useRef<HTMLInputElement>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadData() {
     setIsLoading(true);
@@ -213,6 +241,9 @@ export default function MenuPage() {
     });
     setError(null);
     setNotice(null);
+    setImageError(null);
+    setImageUploadError(null);
+    setIsImageDragActive(false);
     setIsModalOpen(true);
   }
 
@@ -230,18 +261,96 @@ export default function MenuPage() {
     });
     setError(null);
     setNotice(null);
+    setImageError(null);
+    setImageUploadError(null);
+    setIsImageDragActive(false);
     setIsModalOpen(true);
   }
 
   function closeModal() {
-    if (isSaving) return;
+    if (isSaving || isImageUploading) return;
     setIsModalOpen(false);
     setEditingItem(null);
     setForm(emptyMenuForm);
+    setImageError(null);
+    setImageUploadError(null);
+    setIsImageDragActive(false);
   }
 
   function updateForm(field: keyof MenuForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateImageUrl(value: string) {
+    updateForm('imageUrl', value);
+    setImageUploadError(null);
+    setImageError(
+      value.trim() && !isValidImageUrl(value.trim())
+        ? 'Enter a valid http(s) image URL, /images path, or upload a file.'
+        : null
+    );
+  }
+
+  async function uploadMenuImage(file: File | null | undefined) {
+    if (!file) return;
+
+    if (!allowedImageTypes.includes(file.type)) {
+      setImageUploadError('Upload a JPEG, PNG, or WebP image.');
+      return;
+    }
+
+    if (file.size > maxImageUploadSize) {
+      setImageUploadError('Image must be 5 MB or smaller.');
+      return;
+    }
+
+    const uploadForm = new FormData();
+    uploadForm.append('file', file);
+    setIsImageUploading(true);
+    setImageUploadError(null);
+    setImageError(null);
+
+    try {
+      const response = await authFetch('/api/manager/menu/image', {
+        method: 'POST',
+        body: uploadForm,
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload image.');
+      }
+
+      updateImageUrl(data.imageUrl);
+    } catch (uploadError) {
+      setImageUploadError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : 'Failed to upload image.'
+      );
+    } finally {
+      setIsImageUploading(false);
+      if (imageFileInputRef.current) {
+        imageFileInputRef.current.value = '';
+      }
+    }
+  }
+
+  function handleImageDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setIsImageDragActive(false);
+    uploadMenuImage(event.dataTransfer.files[0]);
+  }
+
+  function handleImagePaste(event: ClipboardEvent<HTMLDivElement>) {
+    const file = Array.from(event.clipboardData.files).find((pastedFile) =>
+      pastedFile.type.startsWith('image/')
+    );
+
+    if (file) {
+      event.preventDefault();
+      uploadMenuImage(file);
+    }
   }
 
   function updateRecipeRow(
@@ -303,6 +412,23 @@ export default function MenuPage() {
 
   async function handleMenuSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isImageUploading) {
+      setError('Wait for the image upload to finish before saving.');
+      setNotice(null);
+      return;
+    }
+
+    const imageUrl = form.imageUrl.trim();
+
+    if (imageUrl && (!isValidImageUrl(imageUrl) || imageError)) {
+      setError(
+        imageError || 'Enter a valid image URL or upload a JPEG, PNG, or WebP file.'
+      );
+      setNotice(null);
+      return;
+    }
+
     const input = parseMenuForm();
 
     if (!input) {
@@ -951,18 +1077,111 @@ export default function MenuPage() {
                     ))}
                   </select>
                 </label>
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
-                    Image URL
-                  </span>
-                  <input
-                    value={form.imageUrl}
-                    onChange={(event) =>
-                      updateForm('imageUrl', event.target.value)
-                    }
-                    className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-[#fbfdfb] px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
-                  />
-                </label>
+                <div
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    setIsImageDragActive(true);
+                  }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsImageDragActive(true);
+                  }}
+                  onDragLeave={() => setIsImageDragActive(false)}
+                  onDrop={handleImageDrop}
+                  onPaste={handleImagePaste}
+                  className={`md:col-span-2 rounded-[24px] border p-4 transition ${
+                    isImageDragActive
+                      ? 'border-[#3f8a5a] bg-[#eef8ef] shadow-[0_0_0_3px_rgba(63,138,90,0.14)]'
+                      : 'border-[#e4ece0] bg-[#f8fbf7]'
+                  }`}
+                >
+                  <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+                    <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[18px] border border-[#d8e2d3] bg-white">
+                      {form.imageUrl.trim() ? (
+                        <img
+                          src={form.imageUrl.trim()}
+                          alt={form.name.trim() || 'Menu item preview'}
+                          className="h-full w-full object-cover"
+                          onLoad={() => setImageError(null)}
+                          onError={() =>
+                            setImageError(
+                              'Image preview failed to load. Use another URL or upload a different file.'
+                            )
+                          }
+                        />
+                      ) : (
+                        <div className="px-4 text-center text-sm font-semibold text-[#7a8777]">
+                          No image selected
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                          Drink Image
+                        </p>
+                        <p className="mt-1 text-sm text-[#586756]">
+                          Choose a file, drop one here, paste an image, or keep using a public URL.
+                        </p>
+                      </div>
+
+                      <input
+                        ref={imageFileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(event) =>
+                          uploadMenuImage(event.target.files?.[0])
+                        }
+                      />
+
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => imageFileInputRef.current?.click()}
+                          disabled={isImageUploading}
+                          className="rounded-full bg-[#2f7a5f] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#28684f] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isImageUploading ? 'Uploading...' : 'Choose Image'}
+                        </button>
+                        {form.imageUrl.trim() ? (
+                          <button
+                            type="button"
+                            onClick={() => updateImageUrl('')}
+                            disabled={isImageUploading}
+                            className="rounded-full border border-[#d4ddd0] bg-white px-4 py-2 text-sm font-semibold text-[#586756] transition hover:bg-[#f5f8f3] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Clear Image
+                          </button>
+                        ) : null}
+                      </div>
+
+                      <label className="block">
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7a8777]">
+                          Image URL
+                        </span>
+                        <input
+                          value={form.imageUrl}
+                          onChange={(event) => updateImageUrl(event.target.value)}
+                          placeholder="https://example.com/drink.jpg or /images/drink.png"
+                          className="mt-2 w-full rounded-[18px] border border-[#d8e2d3] bg-white px-4 py-3 text-[#223020] focus:outline-none focus:ring-2 focus:ring-[#9db59a]"
+                        />
+                      </label>
+
+                      {imageUploadError ? (
+                        <p className="text-sm font-semibold text-[#91463d]">
+                          {imageUploadError}
+                        </p>
+                      ) : null}
+                      {imageError ? (
+                        <p className="text-sm font-semibold text-[#91463d]">
+                          {imageError}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="rounded-[24px] border border-[#e4ece0] bg-[#f8fbf7] p-4">
@@ -1056,10 +1275,14 @@ export default function MenuPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || isImageUploading}
                   className="rounded-full bg-[#223020] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#172014] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSaving ? 'Saving...' : 'Save Menu Item'}
+                  {isSaving
+                    ? 'Saving...'
+                    : isImageUploading
+                      ? 'Uploading image...'
+                      : 'Save Menu Item'}
                 </button>
               </div>
             </form>

@@ -14,6 +14,18 @@ function parseMenuId(value: unknown) {
   return Number.isInteger(menuId) && menuId > 0 ? menuId : null;
 }
 
+function isValidImageUrl(value: string | null) {
+  if (!value) return true;
+  if (value.startsWith('/images/')) return true;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 function parseMenuInput(body: Record<string, unknown>): MenuItemInput | null {
   const name = String(body.name ?? '').trim();
   const cost = Number(body.cost);
@@ -28,6 +40,7 @@ function parseMenuInput(body: Record<string, unknown>): MenuItemInput | null {
     !name ||
     !Number.isFinite(cost) ||
     cost < 0 ||
+    !isValidImageUrl(imageUrl) ||
     (categoryId !== null && !Number.isFinite(categoryId))
   ) {
     return null;
