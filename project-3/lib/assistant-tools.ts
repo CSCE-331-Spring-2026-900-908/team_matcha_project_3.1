@@ -9,11 +9,11 @@ import {
   normalizeToppingName,
   TOPPING_COSTS,
 } from '@/lib/toppings';
-import { loadWeatherSnapshot } from '@/lib/weather';
 import {
   getWeatherRecommendationMeta,
+  loadWeatherSnapshot,
   pickWeatherRecommendedItem,
-} from '@/lib/weather-recommendation';
+} from '@/lib/weather';
 
 export type AssistantCartItem = MenuItem & {
   quantity: number;

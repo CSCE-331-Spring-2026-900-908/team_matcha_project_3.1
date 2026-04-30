@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import AnalyticsPage from '@/app/manager/AnalyticsPage';
 import EmployeesPage from '@/app/manager/EmployeesPage';
 import InventoryPage from '@/app/manager/InventoryPage';
-import UsersPage from '@/app/manager/UsersPage';
 import ManagerSidebar from '@/app/manager/ManagerSidebar';
 import MenuPage from '@/app/manager/MenuPage';
 import ReportsPage from '@/app/manager/ReportsPage';
@@ -15,8 +14,7 @@ export type ManagerTool =
   | 'reports'
   | 'menu'
   | 'inventory'
-  | 'employees'
-  | 'users';
+  | 'employees';
 
 export default function ManagerWorkspace() {
   const [selectedTool, setSelectedTool] = useState<ManagerTool>('analytics');
@@ -65,7 +63,6 @@ export default function ManagerWorkspace() {
             {selectedTool === 'menu' ? <MenuPage /> : null}
             {selectedTool === 'inventory' ? <InventoryPage /> : null}
             {selectedTool === 'employees' ? <EmployeesPage /> : null}
-            {selectedTool === 'users' ? <UsersPage /> : null}
           </div>
         </div>
       </section>

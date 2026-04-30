@@ -23,6 +23,31 @@ export type WeatherSnapshot = {
   fetchedAt: string;
 };
 
+export type WeatherRecommendationItem = {
+  name: string;
+  category_label?: string | null;
+};
+
+export type WeatherRecommendationProfile =
+  | 'rainy'
+  | 'snowy'
+  | 'hot'
+  | 'cold'
+  | 'mild';
+
+export type WeatherRecommendationIcon =
+  | 'Sun'
+  | 'CloudRain'
+  | 'CloudSnow'
+  | 'Cloud';
+
+export type WeatherRecommendationMeta = {
+  profile: WeatherRecommendationProfile;
+  icon: WeatherRecommendationIcon;
+  label: string;
+  reason: string;
+};
+
 type OpenMeteoResponse = {
   current?: {
     temperature_2m?: number;
@@ -68,12 +93,202 @@ const weatherCodeLabels: Record<number, string> = {
   99: 'Thunderstorm with heavy hail',
 };
 
+type RandomFn = () => number;
+
+const HOT_TEMPERATURE_F = 82;
+const COLD_TEMPERATURE_F = 55;
+
+const HOT_CATEGORY_LABELS = new Set(['Fruit Teas']);
+const COLD_CATEGORY_LABELS = new Set(['Milk Teas', 'Green & Oolong Teas']);
+
+const HOT_KEYWORDS = ['slush', 'iced', 'fruit tea', 'fruitberry'] as const;
+const FRUIT_FLAVOR_KEYWORDS = [
+  'mango',
+  'strawberry',
+  'lychee',
+  'peach',
+  'pineapple',
+  'passionfruit',
+  'guava',
+  'berry',
+] as const;
+const COLD_KEYWORDS = [
+  'latte',
+  'milk',
+  'matcha',
+  'oolong',
+  'coffee',
+  'brown sugar',
+  'wintermelon',
+  'taro',
+  'thai',
+  'almond',
+  'coconut',
+  'red bean',
+  'caramel',
+  'honeydew',
+] as const;
+const MILD_KEYWORDS = [
+  'tea',
+  'matcha',
+  'milk',
+  'coffee',
+  'fruit',
+  'slush',
+  'iced',
+] as const;
+
+function matchesKeywords(value: string, keywords: readonly string[]) {
+  const normalizedValue = value.toLowerCase();
+  return keywords.some((keyword) => normalizedValue.includes(keyword));
+}
+
+function pickRandomItem<T>(items: T[], random: RandomFn) {
+  if (items.length === 0) return null;
+
+  const index = Math.floor(random() * items.length);
+  return items[index] ?? null;
+}
+
+function isHotWeatherDrink(item: WeatherRecommendationItem) {
+  const categoryLabel = item.category_label ?? '';
+  return (
+    HOT_CATEGORY_LABELS.has(categoryLabel) ||
+    matchesKeywords(item.name, HOT_KEYWORDS) ||
+    (categoryLabel !== 'Milk Teas' &&
+      matchesKeywords(item.name, FRUIT_FLAVOR_KEYWORDS))
+  );
+}
+
+function isColdWeatherDrink(item: WeatherRecommendationItem) {
+  const categoryLabel = item.category_label ?? '';
+  return (
+    COLD_CATEGORY_LABELS.has(categoryLabel) ||
+    matchesKeywords(item.name, COLD_KEYWORDS)
+  );
+}
+
+function isMildWeatherDrink(item: WeatherRecommendationItem) {
+  return (
+    isHotWeatherDrink(item) ||
+    isColdWeatherDrink(item) ||
+    matchesKeywords(item.name, MILD_KEYWORDS)
+  );
+}
+
 export function weatherCodeToLabel(code: number | null): string {
   if (code === null) {
     return 'Weather unavailable';
   }
 
   return weatherCodeLabels[code] ?? 'Weather unavailable';
+}
+
+export function getWeatherRecommendationProfile(
+  weather: Pick<WeatherSnapshot, 'current'> | null
+): WeatherRecommendationProfile {
+  const currentTemp = weather?.current.temperatureF;
+  const condition = weather?.current.condition.toLowerCase() ?? '';
+
+  if (
+    condition.includes('rain') ||
+    condition.includes('drizzle') ||
+    condition.includes('thunderstorm')
+  ) {
+    return 'rainy';
+  }
+
+  if (condition.includes('snow') || condition.includes('fog')) {
+    return 'snowy';
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp >= HOT_TEMPERATURE_F) {
+    return 'hot';
+  }
+
+  if (typeof currentTemp === 'number' && currentTemp <= COLD_TEMPERATURE_F) {
+    return 'cold';
+  }
+
+  return 'mild';
+}
+
+export function getWeatherRecommendationMeta(
+  weather: Pick<WeatherSnapshot, 'current'> | null
+): WeatherRecommendationMeta {
+  const profile = getWeatherRecommendationProfile(weather);
+
+  switch (profile) {
+    case 'rainy':
+      return {
+        profile,
+        icon: 'CloudRain',
+        label: 'Rainy Day Pick',
+        reason:
+          'Rainy weather calls for something smoother and more comforting.',
+      };
+    case 'snowy':
+      return {
+        profile,
+        icon: 'CloudSnow',
+        label: 'Cozy Weather Pick',
+        reason:
+          'Cool, overcast weather pairs better with richer and cozier drinks.',
+      };
+    case 'hot':
+      return {
+        profile,
+        icon: 'Sun',
+        label: 'Hot Weather Pick',
+        reason:
+          'Warm weather today makes fruit-forward, icy drinks the better pick.',
+      };
+    case 'cold':
+      return {
+        profile,
+        icon: 'Cloud',
+        label: 'Cold Weather Comfort',
+        reason:
+          'Cooler air outside makes a richer, cozier drink feel like the right move.',
+      };
+    case 'mild':
+    default:
+      return {
+        profile: 'mild',
+        icon: 'Cloud',
+        label: 'House Weather Pick',
+        reason: 'Today feels like a good match for a balanced house favorite.',
+      };
+  }
+}
+
+export function pickWeatherRecommendedItem<T extends WeatherRecommendationItem>(
+  items: T[],
+  weather: Pick<WeatherSnapshot, 'current'> | null,
+  random: RandomFn = Math.random
+) {
+  if (items.length === 0) return null;
+
+  const profile = getWeatherRecommendationProfile(weather);
+
+  let matchingItems: T[];
+
+  switch (profile) {
+    case 'rainy':
+    case 'snowy':
+    case 'cold':
+      matchingItems = items.filter(isColdWeatherDrink);
+      break;
+    case 'hot':
+      matchingItems = items.filter(isHotWeatherDrink);
+      break;
+    case 'mild':
+    default:
+      matchingItems = items.filter(isMildWeatherDrink);
+      break;
+  }
+
+  return pickRandomItem(matchingItems.length > 0 ? matchingItems : items, random);
 }
 
 type LoadWeatherOptions = {

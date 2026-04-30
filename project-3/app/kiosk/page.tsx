@@ -23,7 +23,7 @@ import {
   getWeatherRecommendationMeta,
   pickWeatherRecommendedItem,
   type WeatherRecommendationIcon,
-} from '@/lib/weather-recommendation';
+} from '@/lib/weather';
 
 type GoogleAccountsApi = {
   id: {

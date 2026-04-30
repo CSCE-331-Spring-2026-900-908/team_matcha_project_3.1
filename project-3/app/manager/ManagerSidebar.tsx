@@ -43,12 +43,6 @@ const tools: Array<{
     title: 'Employees',
     description: 'Add, edit, and delete employee rows.',
   },
-  {
-    id: 'users',
-    eyebrow: 'Access control',
-    title: 'Users',
-    description: 'Manage employee and manager login credentials.',
-  },
 ];
 
 export default function ManagerSidebar({
