@@ -13,11 +13,17 @@ import {
   categorizeItem,
   currencyFormatter,
   getCategoryIcon,
+  getItemDescription,
   getOrderedCategories,
   getItemBadge,
   type MenuItem,
   type CartItem,
 } from '@/components/pos-types';
+import {
+  getWeatherRecommendationMeta,
+  pickWeatherRecommendedItem,
+  type WeatherRecommendationIcon,
+} from '@/lib/weather-recommendation';
 
 type GoogleAccountsApi = {
   id: {
@@ -68,6 +74,9 @@ const hasSameCustomization = (first: CartItem, second: CartItem) =>
   first.topping === second.topping &&
   (first.cupSize ?? 'Medium') === (second.cupSize ?? 'Medium');
 
+const isSeasonalCategoryItem = (item: MenuItem) =>
+  (item.category_label ?? '').toLowerCase().includes('seasonal');
+
 function CategoryIcon({ iconName }: { iconName: string }) {
   switch (iconName) {
     case 'Leaf':
@@ -104,51 +113,37 @@ function CategoryIcon({ iconName }: { iconName: string }) {
   }
 }
 
-function pickWeatherRecommendedItem(items: MenuItem[], weather: WeatherApiResponse | null) {
-  if (items.length === 0) return null;
-
-  const currentTemp = weather?.current.temperatureF;
-  const condition = weather?.current.condition.toLowerCase() ?? '';
-
-  const findByKeywords = (keywords: string[]) =>
-    items.find((item) => keywords.some((keyword) => item.name.toLowerCase().includes(keyword)));
-
-  if (condition.includes('rain') || condition.includes('drizzle') || condition.includes('thunderstorm')) {
-    return findByKeywords(['latte', 'milk', 'matcha']) ?? items[0];
+function WeatherGlyph({ iconName }: { iconName: WeatherRecommendationIcon }) {
+  switch (iconName) {
+    case 'Sun':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77" />
+        </svg>
+      );
+    case 'CloudRain':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 15.5h10.5a3.5 3.5 0 1 0-.61-6.95A4.5 4.5 0 0 0 7 7.75a3.25 3.25 0 0 0-1 7.75Z" />
+          <path d="M9 18.5 8 21M13 18.5 12 21M17 18.5 16 21" />
+        </svg>
+      );
+    case 'CloudSnow':
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 15.5h10.5a3.5 3.5 0 1 0-.61-6.95A4.5 4.5 0 0 0 7 7.75a3.25 3.25 0 0 0-1 7.75Z" />
+          <path d="m8.5 18.5 1 1m0-1-1 1M12.5 18.5l1 1m0-1-1 1M16.5 18.5l1 1m0-1-1 1" />
+        </svg>
+      );
+    case 'Cloud':
+    default:
+      return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 18h11a4 4 0 1 0-.7-7.94A5 5 0 0 0 6.4 8.6 3.5 3.5 0 0 0 6 18Z" />
+        </svg>
+      );
   }
-
-  if (condition.includes('snow') || condition.includes('fog')) {
-    return findByKeywords(['latte', 'milk', 'tea']) ?? items[0];
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp >= 82) {
-    return findByKeywords(['fruit', 'mango', 'strawberry', 'tea']) ?? items[0];
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp <= 55) {
-    return findByKeywords(['matcha', 'latte', 'milk']) ?? items[0];
-  }
-
-  return findByKeywords(['matcha', 'tea', 'milk']) ?? items[0];
-}
-
-function getWeatherRecommendationCopy(weather: WeatherApiResponse | null) {
-  const currentTemp = weather?.current.temperatureF;
-  const condition = weather?.current.condition.toLowerCase() ?? '';
-
-  if (condition.includes('rain') || condition.includes('thunderstorm')) {
-    return 'Rainy weather calls for something smoother and more comforting.';
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp >= 82) {
-    return 'Warm weather today makes a lighter, more refreshing drink the better pick.';
-  }
-
-  if (typeof currentTemp === 'number' && currentTemp <= 55) {
-    return 'Cooler air outside makes a richer, cozier drink feel like the right move.';
-  }
-
-  return 'Current weather makes this a strong all-around house recommendation.';
 }
 
 export default function KioskPage() {
@@ -167,6 +162,7 @@ export default function KioskPage() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [weather, setWeather] = useState<WeatherApiResponse | null>(null);
+  const [seasonalIndex, setSeasonalIndex] = useState(0);
   const [isBrewing, setIsBrewing] = useState(false);
   const [animateCartBadge, setAnimateCartBadge] = useState(false);
   const [redeemConfirmOpen, setRedeemConfirmOpen] = useState(false);
@@ -341,20 +337,43 @@ useEffect(() => {
     return items.filter((item) => categorizeItem(item) === activeCategory);
   }, [items, activeCategory]);
 
+  const weatherRecommendation = useMemo(
+    () => getWeatherRecommendationMeta(weather),
+    [weather]
+  );
+
   const featuredItem = useMemo(
     () => pickWeatherRecommendedItem(items, weather),
     [items, weather]
   );
 
+  const seasonalItems = useMemo(() => {
+    return items.filter(isSeasonalCategoryItem);
+  }, [items]);
+
   const seasonalItem = useMemo(
     () =>
-      items.find((item) => item.name.toLowerCase().includes('brown sugar')) ??
-      items.find((item) => categorizeItem(item) === 'Milk Teas') ??
-      items[1] ??
-      items[0] ??
-      null,
-    [items]
+      seasonalItems.length > 0
+        ? (seasonalItems[seasonalIndex % seasonalItems.length] ?? null)
+        : null,
+    [seasonalIndex, seasonalItems]
   );
+
+  useEffect(() => {
+    setSeasonalIndex(0);
+  }, [seasonalItems]);
+
+  useEffect(() => {
+    if (seasonalItems.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setSeasonalIndex((currentIndex) => (currentIndex + 1) % seasonalItems.length);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [seasonalItems]);
 
   const subtotalForDisplay = cart.reduce((acc, item) => acc + item.cost * item.quantity, 0);
   const cartTotal = Math.max(0, subtotalForDisplay - discountAmount) * 1.0825;
@@ -731,32 +750,48 @@ if (kioskUser) {
           <section className="matcha-grid mb-6 grid gap-4 rounded-[32px] border border-[#e8e2d7] bg-[linear-gradient(135deg,#fffdf9_0%,#eef1ec_100%)] p-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]" aria-labelledby="featured-drink-title">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
               <section className="rounded-[28px] bg-[#1f2520] px-6 py-6 text-white shadow-[0_18px_44px_rgba(31,37,32,0.18)]" aria-describedby="featured-drink-copy">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#dcefe4]">
-                    Weather Pick
-                  </span>
-                  {featuredItem && getItemBadge(featuredItem.name) ? (
-                    <span className="rounded-full bg-[#d9b16f] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#1f2520]">
-                      {getItemBadge(featuredItem.name)}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!featuredItem) return;
+                    setModalState({ mode: 'add', item: featuredItem });
+                  }}
+                  disabled={!featuredItem}
+                  className="w-full text-left transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-white/60 disabled:cursor-default disabled:opacity-100"
+                  aria-label={
+                    featuredItem
+                      ? `Customize ${featuredItem.name}`
+                      : 'No weather recommendation available'
+                  }
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#dcefe4]">
+                      <WeatherGlyph iconName={weatherRecommendation.icon} />
+                      {weatherRecommendation.label}
                     </span>
-                  ) : null}
-                </div>
-                <h2 id="featured-drink-title" className="mt-4 max-w-xl text-3xl font-bold leading-tight lg:text-4xl">
-                  {featuredItem ? featuredItem.name : 'Fresh whisked matcha, ready in minutes.'}
-                </h2>
-                <p id="featured-drink-copy" className="mt-3 max-w-2xl text-base leading-7 text-white/82">
-                  {getWeatherRecommendationCopy(weather)}
-                </p>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <span className="rounded-full border border-white/18 bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
-                    {weatherSummary}
-                  </span>
-                  {weather?.location?.label ? (
+                    {featuredItem && getItemBadge(featuredItem.name) ? (
+                      <span className="rounded-full bg-[#d9b16f] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#1f2520]">
+                        {getItemBadge(featuredItem.name)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <h2 id="featured-drink-title" className="mt-4 max-w-xl text-3xl font-bold leading-tight lg:text-4xl">
+                    {featuredItem ? featuredItem.name : 'Fresh whisked matcha, ready in minutes.'}
+                  </h2>
+                  <p id="featured-drink-copy" className="mt-3 max-w-2xl text-base leading-7 text-white/82">
+                    {weatherRecommendation.reason}
+                  </p>
+                  <div className="mt-5 flex flex-wrap gap-3">
                     <span className="rounded-full border border-white/18 bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
-                      {weather.location.label}
+                      {weatherSummary}
                     </span>
-                  ) : null}
-                </div>
+                    {weather?.location?.label ? (
+                      <span className="rounded-full border border-white/18 bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
+                        {weather.location.label}
+                      </span>
+                    ) : null}
+                  </div>
+                </button>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button
                     onClick={() => {
@@ -774,79 +809,155 @@ if (kioskUser) {
               </section>
 
               <aside className="overflow-hidden rounded-[28px] border border-[#d9e4da] bg-white shadow-[0_18px_44px_rgba(47,36,29,0.12)]" aria-label="Featured drink image">
-                <div className="relative h-full min-h-[260px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
-                  {featuredItem?.image_url ? (
-                    <img
-                      src={featuredItem.image_url}
-                      alt={featuredItem.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-8xl opacity-60" aria-hidden="true">
-                      🍵
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!featuredItem) return;
+                    setModalState({ mode: 'add', item: featuredItem });
+                  }}
+                  disabled={!featuredItem}
+                  className="block h-full w-full text-left transition hover:opacity-95 focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2 disabled:cursor-default disabled:opacity-100"
+                  aria-label={
+                    featuredItem
+                      ? `Customize ${featuredItem.name}`
+                      : 'No weather recommendation available'
+                  }
+                >
+                  <div className="relative h-full min-h-[260px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
+                    {featuredItem?.image_url ? (
+                      <img
+                        src={featuredItem.image_url}
+                        alt={featuredItem.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-8xl opacity-60" aria-hidden="true">
+                        🍵
+                      </div>
+                    )}
+                    <div className="contrast-image-overlay absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(31,37,32,0.82)_100%)] p-5 text-white">
+                      <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/72">
+                        Highlighted Drink
+                      </p>
+                      <p className="mt-2 text-2xl font-bold">
+                        {featuredItem ? featuredItem.name : 'House Favorite'}
+                      </p>
                     </div>
-                  )}
-                  <div className="contrast-image-overlay absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent_0%,rgba(31,37,32,0.82)_100%)] p-5 text-white">
-                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/72">
-                      Highlighted Drink
-                    </p>
-                    <p className="mt-2 text-2xl font-bold">
-                      {featuredItem ? featuredItem.name : 'House Favorite'}
-                    </p>
                   </div>
-                </div>
+                </button>
               </aside>
             </div>
 
             <div className="grid gap-4">
-              <section className="rounded-[28px] border border-[#dce5d8] bg-white p-5 shadow-sm" aria-labelledby="weather-pairing-title">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">
-                  Weather Pairing
-                </p>
-                <h3 id="weather-pairing-title" className="mt-3 text-2xl font-bold text-[#1f2520]">
-                  {weather ? weather.current.condition : 'House guidance'}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-[#4a554a]">
-                  {getWeatherRecommendationCopy(weather)}
-                </p>
-                {featuredItem ? (
-                  <button
-                    onClick={() => {
-                      setModalState({ mode: 'add', item: featuredItem });
-                    }}
-                    className="mt-4 min-h-[48px] rounded-full bg-[#eef1ec] px-5 py-2 text-sm font-bold text-[#2f7a5f] transition hover:bg-[#dde8df] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
-                  >
-                    Order This Recommendation
-                  </button>
-                ) : null}
-              </section>
+              <section
+                className="rounded-[28px] border border-[#f0c85a] bg-[linear-gradient(135deg,#fff7d1_0%,#ffe79c_48%,#ffd76d_100%)] p-5 shadow-[0_12px_28px_rgba(185,134,18,0.18)]"
+                aria-labelledby="seasonal-spotlight-title"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#8d5d00]">
+                      Summer Spotlight
+                    </p>
+                    <h3 id="seasonal-spotlight-title" className="mt-2 text-2xl font-bold text-[#3c2a03]">
+                      Rotating Seasonal Drinks
+                    </h3>
+                  </div>
+                  {seasonalItems.length > 1 ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setSeasonalIndex((currentIndex) =>
+                            currentIndex === 0 ? seasonalItems.length - 1 : currentIndex - 1
+                          )
+                        }
+                        className="grid h-10 w-10 place-items-center rounded-full border border-[#d8a82f] bg-white/70 text-[#8d5d00] transition hover:bg-white focus:outline-none focus:ring-4 focus:ring-[#f0c85a] focus:ring-offset-2 focus:ring-offset-[#ffe79c]"
+                        aria-label="Show previous seasonal drink"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() =>
+                          setSeasonalIndex((currentIndex) => (currentIndex + 1) % seasonalItems.length)
+                        }
+                        className="grid h-10 w-10 place-items-center rounded-full border border-[#d8a82f] bg-white/70 text-[#8d5d00] transition hover:bg-white focus:outline-none focus:ring-4 focus:ring-[#f0c85a] focus:ring-offset-2 focus:ring-offset-[#ffe79c]"
+                        aria-label="Show next seasonal drink"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
 
-              <section className="rounded-[28px] border border-[#eadfce] bg-white p-5 shadow-sm" aria-labelledby="seasonal-spotlight-title">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d8a6f]">Seasonal Spotlight</p>
-                <div className="mt-3 grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
-                  <div className="overflow-hidden rounded-[20px] bg-[linear-gradient(180deg,#f8f1e7_0%,#eef1ec_100%)]">
+                <div className="mt-4 grid gap-4 sm:grid-cols-[132px_minmax(0,1fr)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!seasonalItem) return;
+                      setModalState({ mode: 'add', item: seasonalItem });
+                    }}
+                    disabled={!seasonalItem}
+                    className="overflow-hidden rounded-[22px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.7)_0%,rgba(255,244,196,0.92)_100%)] text-left transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[#f0c85a] focus:ring-offset-2 focus:ring-offset-[#ffe79c] disabled:cursor-default disabled:opacity-100"
+                    aria-label={
+                      seasonalItem
+                        ? `Customize ${seasonalItem.name}`
+                        : 'No seasonal drinks available'
+                    }
+                  >
                     {seasonalItem?.image_url ? (
                       <img
                         src={seasonalItem.image_url}
                         alt={seasonalItem.name}
-                        className="h-full min-h-[120px] w-full object-cover"
+                        className="h-full min-h-[132px] w-full object-cover"
                       />
                     ) : (
-                      <div className="flex min-h-[120px] items-center justify-center text-5xl opacity-60" aria-hidden="true">
-                        🧋
+                      <div className="flex min-h-[132px] items-center justify-center text-5xl text-[#8d5d00]" aria-hidden="true">
+                        *
                       </div>
                     )}
-                  </div>
+                  </button>
                   <div>
-                    <h3 id="seasonal-spotlight-title" className="text-2xl font-bold text-[#1f2520]">
-                      {seasonalItem ? seasonalItem.name : 'House Favorites'}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-[#4a554a]">
-                      A brighter, limited-time style item to pull attention toward specials and make the kiosk feel alive.
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!seasonalItem) return;
+                        setModalState({ mode: 'add', item: seasonalItem });
+                      }}
+                      disabled={!seasonalItem}
+                      className="w-full text-left transition hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-[#f0c85a] focus:ring-offset-2 focus:ring-offset-[#ffe79c] disabled:cursor-default disabled:opacity-100"
+                      aria-label={
+                        seasonalItem
+                          ? `Customize ${seasonalItem.name}`
+                          : 'No seasonal drinks available'
+                      }
+                    >
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#8d5d00]">
+                          {seasonalItems.length > 0
+                            ? `${(seasonalIndex % seasonalItems.length) + 1} / ${seasonalItems.length}`
+                            : 'Seasonal'}
+                        </span>
+                        {seasonalItem && getItemBadge(seasonalItem.name) ? (
+                          <span className="rounded-full bg-[#f6c53c] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#4f3300]">
+                            {getItemBadge(seasonalItem.name)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <h4 className="mt-3 text-2xl font-bold text-[#3c2a03]">
+                        {seasonalItem ? seasonalItem.name : 'No Seasonal Drinks'}
+                      </h4>
+                      <p className="mt-2 text-sm leading-6 text-[#6c4a06]">
+                        {seasonalItem
+                          ? `${getItemDescription(seasonalItem.name)} Part of the rotating seasonal lineup.`
+                          : 'Add items to the Seasonal category to show them in this spotlight.'}
+                      </p>
+                    </button>
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       {seasonalItem ? (
-                        <span className="rounded-full bg-[#eef1ec] px-3 py-1.5 text-sm font-bold text-[#2f7a5f]">
+                        <span className="rounded-full bg-white/80 px-3 py-1.5 text-sm font-bold text-[#6c4a06]">
                           {currencyFormatter.format(seasonalItem.cost)}
                         </span>
                       ) : null}
@@ -855,12 +966,26 @@ if (kioskUser) {
                           onClick={() => {
                             setModalState({ mode: 'add', item: seasonalItem });
                           }}
-                          className="min-h-[44px] rounded-full bg-[#1f2520] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#313832] focus:outline-none focus:ring-4 focus:ring-[#2f7a5f] focus:ring-offset-2"
+                          className="min-h-[44px] rounded-full bg-[#5c3b00] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#472d00] focus:outline-none focus:ring-4 focus:ring-[#f0c85a] focus:ring-offset-2 focus:ring-offset-[#ffe79c]"
                         >
-                          Order Brown Sugar Tea
+                          Customize This Seasonal Drink
                         </button>
                       ) : null}
                     </div>
+                    {seasonalItems.length > 1 ? (
+                      <div className="mt-4 flex gap-2" aria-hidden="true">
+                        {seasonalItems.map((item, index) => (
+                          <span
+                            key={item.menuid}
+                            className={`h-2.5 rounded-full transition-all ${
+                              index === seasonalIndex % seasonalItems.length
+                                ? 'w-8 bg-[#8d5d00]'
+                                : 'w-2.5 bg-[#d6b154]'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </section>
